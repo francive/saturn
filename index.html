@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Un Universo Infinito</title>
+    <title>Un Universo Infinito para Ti</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; }
         canvas { display: block; }
@@ -16,21 +16,21 @@
         const scene = new THREE.Scene();
         const textureLoader = new THREE.TextureLoader();
 
-        // 1. FONDO ULTRA-LEJANO
-        const bgTexture = textureLoader.load('estrellas.jpg');
+        // 1. FONDO ULTRA-LEJANO (Usando tu nueva imagen limpia)
+        const bgTexture = textureLoader.load('estrellas.jpg'); // Asegúrate de que image_11.png se llame así
         bgTexture.wrapS = bgTexture.wrapT = THREE.RepeatWrapping;
-        bgTexture.repeat.set(2, 2);
-        const bgGeometry = new THREE.PlaneGeometry(1000, 600);
+        bgTexture.repeat.set(1, 1); // Fondo limpio, no necesita repetición
+        const bgGeometry = new THREE.PlaneGeometry(200, 120);
         const bgMaterial = new THREE.MeshBasicMaterial({ 
             map: bgTexture, 
             transparent: true, 
-            opacity: 0.9,
+            opacity: 1.0, // Brillo total para el fondo limpio
             depthWrite: false
         });
         const backgroundPlane = new THREE.Mesh(bgGeometry, bgMaterial);
         scene.add(backgroundPlane);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2500);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -75,17 +75,18 @@
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
+        const destelloTexture = textureLoader.load('destello.png');
         const starMat = new THREE.SpriteMaterial({ 
-            map: textureLoader.load('destello.png'), 
+            map: destelloTexture, 
             transparent: true, 
             blending: THREE.AdditiveBlending,
             depthWrite: false,
-            opacity: 0.8
+            opacity: 0.9
         });
 
-        for (let i = 0; i < 4000; i++) { // Más cantidad para densidad
+        for (let i = 0; i < 4500; i++) { // Máxima densidad
             const angle = Math.random() * Math.PI * 2;
-            const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.5; 
+            const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.8; 
             const star = new THREE.Sprite(starMat.clone());
             const yPos = (Math.random() - 0.5) * 0.18;
             const s = Math.random() * 0.08 + 0.03; 
@@ -118,17 +119,50 @@
             }));
 
             const angle = Math.random() * Math.PI * 2;
-            const radius = 2.6 + Math.random() * 2.8;
+            const radius = 2.6 + Math.random() * 3.0;
             wordSprite.position.set(Math.cos(angle) * radius, (Math.random()-0.5) * 0.1, Math.sin(angle) * radius);
             wordSprite.scale.set(0.2, 0.06, 1); 
             wordSprite.material.opacity = 0;
             wordsGroup.add(wordSprite);
         }
 
+        // --- 5. LÓGICA DE ESTRELLAS FUGACES ---
+        const shootingStars = [];
+        const shootingStarMat = new THREE.SpriteMaterial({
+            map: destelloTexture,
+            blending: THREE.AdditiveBlending,
+            transparent: true,
+            depthWrite: false,
+            color: 0xffffff
+        });
+
+        function spawnShootingStar() {
+            const star = new THREE.Sprite(shootingStarMat.clone());
+            
+            // Aparecen en el plano de fondo pero un poco más cerca
+            const startX = (Math.random() - 0.5) * 300;
+            const startY = (Math.random() - 0.5) * 200;
+            star.position.set(startX, startY, -350); 
+            
+            // Escala alargada para efecto de estela
+            star.scale.set(6, 0.3, 1); 
+            
+            // Trayectoria aleatoria rápida
+            star.userData.velocity = new THREE.Vector3(
+                (Math.random() - 0.5) * 15, // Velocidad X
+                (Math.random() - 0.5) * 10, // Velocidad Y
+                0
+            );
+            star.userData.opacity = 1.0;
+            
+            scene.add(star);
+            shootingStars.push(star);
+        }
+
         camera.position.set(0, 3, 10);
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.maxDistance = 50; // Para no perder de vista el sistema
+        controls.maxDistance = 100;
 
         function animate() {
             requestAnimationFrame(animate);
@@ -138,10 +172,28 @@
             ringGroup.rotation.y += 0.0003;
 
             // EL FONDO SIGUE A LA CÁMARA (MUY LEJOS)
-            const vector = new THREE.Vector3(0, 0, -400); 
+            const vector = new THREE.Vector3(0, 0, -50); 
             vector.applyQuaternion(camera.quaternion);
             backgroundPlane.position.copy(camera.position).add(vector);
             backgroundPlane.quaternion.copy(camera.quaternion);
+
+            // Actualizar estrellas fugaces
+            for (let i = shootingStars.length - 1; i >= 0; i--) {
+                const star = shootingStars[i];
+                star.position.add(star.userData.velocity);
+                star.userData.opacity -= 0.02; // Se desvanecen
+                star.material.opacity = star.userData.opacity;
+                
+                if (star.userData.opacity <= 0) {
+                    scene.remove(star);
+                    shootingStars.splice(i, 1);
+                }
+            }
+
+            // Spawn aleatorio de estrella fugaz (aprox cada 2-5 segundos)
+            if (Math.random() < 0.005) { 
+                spawnShootingStar();
+            }
 
             const dist = camera.position.distanceTo(scene.position);
             if (dist < 7.5) {
