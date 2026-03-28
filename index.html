@@ -7,7 +7,6 @@
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
         
-        /* Panel de control de volumen */
         #audio-container {
             position: absolute;
             top: 20px;
@@ -48,7 +47,6 @@
         const audio = document.getElementById('backgroundAudio');
         const volumeSlider = document.getElementById('volumeRange');
         
-        // Iniciar audio al primer clic (necesario por seguridad del navegador)
         window.addEventListener('click', () => {
             audio.play();
         }, { once: true });
@@ -57,7 +55,7 @@
             audio.volume = e.target.value;
         });
 
-        // 1. FONDO (Cercanía normal: -50)
+        // 1. FONDO
         const bgTexture = textureLoader.load('estrellas.jpg'); 
         const bgGeometry = new THREE.PlaneGeometry(200, 120);
         const bgMaterial = new THREE.MeshBasicMaterial({ 
@@ -114,6 +112,26 @@
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
+        // NUEVO: ANILLOS DE LUZ (GLOW) DEBAJO DE LAS LETRAS
+        const createGlowRing = (radius, color) => {
+            const geometry = new THREE.RingGeometry(radius, radius + 0.05, 128);
+            const material = new THREE.MeshBasicMaterial({ 
+                color: color, 
+                side: THREE.DoubleSide, 
+                transparent: true, 
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending 
+            });
+            const ring = new THREE.Mesh(geometry, material);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = -0.1; // Ajustado para que las letras floten arriba
+            return ring;
+        };
+
+        const ringAmarillo = createGlowRing(3.5, 0xFFD700); 
+        const ringCeleste = createGlowRing(2.2, 0x00FFFF);  
+        ringGroup.add(ringAmarillo, ringCeleste);
+
         const destelloTexture = textureLoader.load('destello.png');
         const starMat = new THREE.SpriteMaterial({ 
             map: destelloTexture, 
@@ -123,13 +141,13 @@
             opacity: 0.9
         });
 
-        for (let i = 0; i < 4500; i++) {
+        for (let i = 0; i < 3500; i++) {
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.8; 
             const star = new THREE.Sprite(starMat.clone());
-            const s = Math.random() * 0.08 + 0.03; 
+            const s = Math.random() * 0.06 + 0.02; 
             star.scale.set(s, s, 1);
-            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.18, Math.sin(angle) * radius);
+            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.15, Math.sin(angle) * radius);
             starsGroup.add(star);
         }
 
@@ -151,7 +169,8 @@
 
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.6 + Math.random() * 3.0;
-            wordSprite.position.set(Math.cos(angle) * radius, (Math.random()-0.5) * 0.1, Math.sin(angle) * radius);
+            // Elevamos las palabras para que el anillo pase por debajo
+            wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
             wordSprite.scale.set(0.2, 0.06, 1); 
             wordSprite.material.opacity = 0;
             wordsGroup.add(wordSprite);
@@ -191,7 +210,6 @@
             backgroundPlane.position.copy(camera.position).add(vector);
             backgroundPlane.quaternion.copy(camera.quaternion);
 
-            // Actualizar estrellas fugaces
             for (let i = shootingStars.length - 1; i >= 0; i--) {
                 const star = shootingStars[i];
                 star.position.add(star.userData.velocity);
@@ -203,7 +221,6 @@
                 }
             }
 
-            // Probabilidad aumentada para estrellas cada 1.5 - 2 seg aprox.
             if (Math.random() < 0.012) spawnShootingStar();
 
             const dist = camera.position.distanceTo(scene.position);
