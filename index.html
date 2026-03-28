@@ -21,54 +21,38 @@
 
         const textureLoader = new THREE.TextureLoader();
 
-        // 1. SOLUCIÓN FONDO INFINITO (Skybox Móvil)
-        // En lugar de una esfera, usamos una caja que envolvemos en la escena
-        // y que moveremos con la cámara para que parezca infinita.
-        const skyboxGeom = new THREE.BoxGeometry(900, 900, 900); // Caja enorme
+        // 1. FONDO INFINITO (Skybox)
+        const skyboxGeom = new THREE.BoxGeometry(900, 900, 900);
         const skyTexture = textureLoader.load('estrellas.jpg');
-        
-        // Creamos materiales para las 6 caras de la caja
-        const skyboxMaterials = [
-            new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide }),
-            new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide }),
-            new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide }),
-            new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide }),
-            new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide }),
-            new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide })
-        ];
-        
+        const skyboxMaterials = Array(6).fill(new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide }));
         const skybox = new THREE.Mesh(skyboxGeom, skyboxMaterials);
         scene.add(skybox);
 
-        // 2. SATURNO (Limpio, sin destello png)
+        // 2. SATURNO
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1, 64, 64),
             new THREE.MeshBasicMaterial({ map: textureLoader.load('saturno.jpg') })
         );
         scene.add(saturn);
 
-        // 3. SHADER DE EFECTO GLOW (Corregido, sin borde raro)
-        // He ajustado las matemáticas para que sea más suave y uniforme.
-        const vertexShader = `
-            varying vec3 vNormal;
-            void main() {
-                vNormal = normalize( normalMatrix * normal );
-                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-            }
-        `;
-        const fragmentShader = `
-            varying vec3 vNormal;
-            void main() {
-                float intensity = pow( 0.65 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ), 3.5 ); 
-                gl_FragColor = vec4( 1.0, 0.85, 0.6, 1.0 ) * intensity;
-            }
-        `;
-
+        // 3. EFECTO GLOW MATEMÁTICO (Sin PNG)
         const glowMesh = new THREE.Mesh(
-            new THREE.SphereGeometry(1.25, 64, 64), 
+            new THREE.SphereGeometry(1.2, 64, 64), 
             new THREE.ShaderMaterial({
-                vertexShader,
-                fragmentShader,
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize( normalMatrix * normal );
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow( 0.7 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ), 4.0 ); 
+                        gl_FragColor = vec4( 1.0, 0.9, 0.7, 1.0 ) * intensity;
+                    }
+                `,
                 side: THREE.BackSide,
                 blending: THREE.AdditiveBlending,
                 transparent: true
@@ -76,91 +60,92 @@
         );
         scene.add(glowMesh);
 
-      // --- NUEVA CONFIGURACIÓN DE ANILLO INCLINADO ---
-const ringGroup = new THREE.Group();
-const starsGroup = new THREE.Group();
-const wordsGroup = new THREE.Group();
+        // 4. ANILLO INCLINADO (Estrellas y Palabras Mezcladas)
+        const ringGroup = new THREE.Group();
+        const starsGroup = new THREE.Group();
+        const wordsGroup = new THREE.Group();
 
-// Inclinación tipo Saturno (aprox 25 grados)
-ringGroup.rotation.x = Math.PI * 0.15; 
-ringGroup.rotation.z = Math.PI * 0.05;
-ringGroup.add(starsGroup, wordsGroup);
-scene.add(ringGroup);
+        // Inclinación real de Saturno (~25-27 grados)
+        ringGroup.rotation.x = Math.PI * 0.15; 
+        ringGroup.rotation.z = Math.PI * 0.03;
+        ringGroup.add(starsGroup, wordsGroup);
+        scene.add(ringGroup);
 
-const glowTexture = textureLoader.load('destello.png');
-const starMat = new THREE.SpriteMaterial({ 
-    map: glowTexture, 
-    transparent: true, 
-    blending: THREE.AdditiveBlending,
-    depthWrite: false 
-});
+        const starMat = new THREE.SpriteMaterial({ 
+            map: textureLoader.load('destello.png'), 
+            transparent: true, 
+            blending: THREE.AdditiveBlending,
+            depthWrite: false 
+        });
 
-// 1. Generar Estrellas (Fondo del anillo) - 800 unidades
-for (let i = 0; i < 800; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 1.7 + Math.random() * 3.2; 
-    const star = new THREE.Sprite(starMat);
-    const s = Math.random() * 0.15 + 0.05; 
-    star.scale.set(s, s, 1);
-    star.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.2, Math.sin(angle) * radius);
-    starsGroup.add(star);
-}
+        // Crear 800 estrellas para la base del anillo
+        for (let i = 0; i < 800; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 1.7 + Math.random() * 3.0; 
+            const star = new THREE.Sprite(starMat);
+            const s = Math.random() * 0.12 + 0.04; 
+            star.scale.set(s, s, 1);
+            star.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.15, Math.sin(angle) * radius);
+            starsGroup.add(star);
+        }
 
-// 2. Generar Palabras (Sustituyendo estrellas) - 400 unidades
-const baseWords = ["Amor", "Te amo", "Camila", "Juntos", "Siempre", "Eterno", "Bonita", "Mi Vida", "17-05-22", "✨", "Vida", "Mundo"];
-for(let i = 0; i < 400; i++) {
-    const text = baseWords[i % baseWords.length];
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 256; canvas.height = 64;
-    ctx.font = 'Bold 40px Arial';
-    ctx.fillStyle = 'white';
-    ctx.textAlign = 'center';
-    ctx.fillText(text, 128, 45);
+        // Crear 400 palabras pequeñas integradas en el anillo
+        const baseWords = ["Amor", "Te amo", "Camila", "Juntos", "Siempre", "Eterno", "Bonita", "Mi Vida", "17-05-22", "✨", "Vida", "Mundo"];
+        for(let i = 0; i < 400; i++) {
+            const text = baseWords[i % baseWords.length];
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 256; canvas.height = 64;
+            ctx.font = 'Bold 40px Arial';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, 128, 45);
 
-    const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
-        map: new THREE.CanvasTexture(canvas), 
-        transparent: true,
-        blending: THREE.AdditiveBlending
-    }));
+            const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
+                map: new THREE.CanvasTexture(canvas), 
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            }));
 
-    // Posición exacta como si fuera una estrella del anillo
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 1.8 + Math.random() * 2.8;
-    wordSprite.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.15, Math.sin(angle) * radius);
-    
-    // Tamaño pequeño para que no se amontonen
-    wordSprite.scale.set(0.18, 0.05, 1); 
-    wordSprite.material.opacity = 0;
-    wordsGroup.add(wordSprite);
-}
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 1.8 + Math.random() * 2.8;
+            wordSprite.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.12, Math.sin(angle) * radius);
+            
+            // Tamaño mini para que parezcan joyas del anillo
+            wordSprite.scale.set(0.18, 0.05, 1); 
+            wordSprite.material.opacity = 0;
+            wordsGroup.add(wordSprite);
+        }
 
-// --- ACTUALIZACIÓN EN EL ANIMATE ---
-function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
+        camera.position.set(0, 1.5, 7);
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
 
-    saturn.rotation.y += 0.002;
-    // Rotamos el grupo entero inclinado
-    ringGroup.rotation.y += 0.0005; 
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
 
-    skybox.position.copy(camera.position);
+            saturn.rotation.y += 0.002;
+            ringGroup.rotation.y += 0.0005; // Rotación lenta del anillo completo
+            skybox.position.copy(camera.position);
 
-    const dist = camera.position.distanceTo(scene.position);
-    if (dist < 4.8) {
-        starsGroup.children.forEach(s => s.material.opacity = 0.2); // Estrellas al mínimo
-        wordsGroup.children.forEach(w => w.material.opacity = 1);   // Palabras al máximo
-    } else {
-        starsGroup.children.forEach(s => s.material.opacity = 1);
-        wordsGroup.children.forEach(w => w.material.opacity = 0);
-    }
+            const dist = camera.position.distanceTo(scene.position);
+            
+            if (dist < 4.8) {
+                // Al acercarse: las estrellas se apagan un poco para dejar ver las palabras
+                starsGroup.children.forEach(s => s.material.opacity = 0.2);
+                wordsGroup.children.forEach(w => w.material.opacity = 1);
+            } else {
+                // Al alejarse: solo se ven las estrellas brillantes
+                starsGroup.children.forEach(s => s.material.opacity = 1);
+                wordsGroup.children.forEach(w => w.material.opacity = 0);
+            }
 
-    renderer.render(scene, camera);
-}
+            renderer.render(scene, camera);
+        }
 
         animate();
 
-        // Ajuste de ventana
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
