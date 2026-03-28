@@ -21,6 +21,7 @@
             gap: 10px;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
+        input[type=range] { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -31,29 +32,33 @@
     </div>
 
     <audio id="backgroundAudio" loop>
-        <source src="saturnaudio.MP3" type="audio/mpeg">
+        <source src="assets/audio/saturnaudio.MP3" type="audio/mpeg">
     </audio>
 
     <script type="module">
         import * as THREE from 'https://unpkg.com/three@0.136.0/build/three.module.js';
         import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
 
-        // --- LÓGICA DE CLIENTE ---
-        const urlParams = new URLSearchParams(window.location.search);
-        const cliente = urlParams.get('user') || 'cliente_01'; 
-
         const scene = new THREE.Scene();
         const textureLoader = new THREE.TextureLoader();
 
+        // Detectar cliente desde URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const user = urlParams.get('user') || 'cliente_01'; 
+
         const audio = document.getElementById('backgroundAudio');
         const volumeSlider = document.getElementById('volumeRange');
+        
         window.addEventListener('click', () => { audio.play(); }, { once: true });
         volumeSlider.addEventListener('input', (e) => { audio.volume = e.target.value; });
 
-        // 1. FONDO
-        const bgTexture = textureLoader.load('estrellas.jpg'); 
-        const bgMaterial = new THREE.MeshBasicMaterial({ map: bgTexture, transparent: true, depthWrite: false });
-        const backgroundPlane = new THREE.Mesh(new THREE.PlaneGeometry(400, 240), bgMaterial);
+        // 1. FONDO ESTELAR (Arreglado)
+        const bgTexture = textureLoader.load('assets/textures/estrellas.jpg'); 
+        const bgGeometry = new THREE.PlaneGeometry(300, 180);
+        const bgMaterial = new THREE.MeshBasicMaterial({ 
+            map: bgTexture, transparent: true, depthWrite: false, side: THREE.BackSide 
+        });
+        const backgroundPlane = new THREE.Mesh(bgGeometry, bgMaterial);
         scene.add(backgroundPlane);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2500);
@@ -62,58 +67,45 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
-        // 2. SATURNO
+        // 2. SATURNO (Ruta corregida)
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
-            new THREE.MeshBasicMaterial({ map: textureLoader.load('saturno.jpg') })
+            new THREE.MeshBasicMaterial({ map: textureLoader.load('assets/textures/saturno.jpg') })
         );
         scene.add(saturn);
 
+        const destelloTexture = textureLoader.load('assets/textures/destello.png');
+
         // 3. GRUPOS
+        const mainOrbitGroup = new THREE.Group();
         const atmosphereStars = new THREE.Group(); 
         const ringGroup = new THREE.Group();        
-        const ringStars = new THREE.Group();        
         const wordsGroup = new THREE.Group();      
-        const photoGroup = new THREE.Group(); // Nuevo grupo para fotos
+        const photoGroup = new THREE.Group(); 
         
-        ringGroup.rotation.x = Math.PI * 0.15;
-        scene.add(atmosphereStars, ringGroup);
-        ringGroup.add(ringStars, wordsGroup, photoGroup); // Las fotos se añaden al grupo inclinado de los anillos
+        mainOrbitGroup.rotation.x = Math.PI * 0.15; // Inclinación de toda la órbita
+        scene.add(atmosphereStars, mainOrbitGroup);
+        mainOrbitGroup.add(ringGroup, wordsGroup, photoGroup);
 
-        const destelloTexture = textureLoader.load('destello.png');
-
-        // --- CAPA 1: ESTRELLAS DOMO ---
-        for (let i = 0; i < 1500; i++) {
+        // --- CAPA 1: ESTRELLAS EXTERIORES (Domo) ---
+        for (let i = 0; i < 2000; i++) {
             const starMat = new THREE.SpriteMaterial({ 
-                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: Math.random() * 0.6 + 0.2
+                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: Math.random() * 0.7 + 0.2
             });
             const star = new THREE.Sprite(starMat);
-            const r = 8 + Math.random() * 4; 
+            const r = 10 + Math.random() * 6; 
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos((Math.random() * 2) - 1);
             star.position.set(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
-            const s = Math.random() * 0.4 + 0.15; 
+            
+            const s = Math.random() * 0.3 + 0.1; 
             star.scale.set(s, s, 1);
             atmosphereStars.add(star);
         }
 
-        // --- CAPA 2: ESTRELLAS ANILLOS ---
-        for (let i = 0; i < 1000; i++) {
-            const starMat = new THREE.SpriteMaterial({ 
-                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 
-            });
-            const star = new THREE.Sprite(starMat);
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 1.8 + Math.random() * 3.5; 
-            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
-            const s = Math.random() * 0.25 + 0.1;
-            star.scale.set(s, s, 1);
-            ringStars.add(star);
-        }
-
-        // --- ANILLOS VISUALES ---
+        // --- CAPA 2: ANILLOS DENSOS (Restaurado) ---
         const ringMat = new THREE.MeshBasicMaterial({ 
-            color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false
+            color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false
         });
         const rings = [new THREE.RingGeometry(1.8, 3.2, 64), new THREE.RingGeometry(3.5, 4.8, 64)];
         rings.forEach(geo => {
@@ -122,8 +114,20 @@
             ringGroup.add(mesh);
         });
 
-        // --- CAPA 3: PALABRAS ---
-        const loveWords = ["Te amo", "✨ Eres muy especial ✨", "Flores amarillas", "Nuestro Amor", "Te adoro", "Siempre brillas", "Flores para ti", "Infinito", "Destino", "Gracia", "Cielo"];
+        // Estrellas pequeñas que orbitan el anillo
+        for (let i = 0; i < 2000; i++) {
+            const starMat = new THREE.SpriteMaterial({ map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            const star = new THREE.Sprite(starMat);
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 1.6 + Math.random() * 3.8; 
+            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.15, Math.sin(angle) * radius);
+            const s = Math.random() * 0.04 + 0.01;
+            star.scale.set(s, s, 1);
+            ringGroup.add(star);
+        }
+
+        // --- CAPA 3: PALABRAS (Fade-in) ---
+        const loveWords = ["Te amo", "✨ Eres muy especial ✨", "Flores amarillas", "Nuestro Amor", "Te adoro", "Siempre brillas", "Flores para ti", "Infinito", "Destino", "Francis Designs", "Cielo"];
         for(let i = 0; i < 100; i++) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -141,28 +145,28 @@
             wordsGroup.add(wordSprite);
         }
 
-        // --- NUEVA CAPA: FOTOS DEL CLIENTE ---
-        // Se cargan 40 fotos con el mismo comportamiento que las frases
+        // --- CAPA 4: FOTOS DEL CLIENTE (1-40, Esparcido Amplio) ---
+        // Se cargan 40 fotos en una órbita amplia y esparcida
         for (let i = 1; i <= 40; i++) {
-            const photoTexture = textureLoader.load(`assets/photos/${cliente}/foto (${i}).jpg`);
+            const photoTexture = textureLoader.load(`assets/photos/${user}/foto (${i}).jpg`);
             const photoMat = new THREE.SpriteMaterial({ 
-                map: photoTexture, 
-                transparent: true, 
-                opacity: 0, 
-                depthWrite: false 
+                map: photoTexture, transparent: true, depthWrite: false, opacity: 0
             });
             const photoSprite = new THREE.Sprite(photoMat);
 
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 2.2 + Math.random() * 2.5; // Misma zona que las frases
-            photoSprite.position.set(Math.cos(angle) * radius, 0.3, Math.sin(angle) * radius);
+            // Esparcido Masivo: Usamos un radio mayor y un ángulo esparcido
+            const angle = (i / 40) * Math.PI * 2 + (Math.random()-0.5) * 0.3; // Distribución circular uniforme con leve ruido
+            const radius = 6 + Math.pow(Math.random(), 0.5) * 6; // Radio amplio de 6 a 12
             
-            // Tamaño similar a las frases (0.5)
-            photoSprite.scale.set(0.5, 0.5, 1); 
+            // Mayor variación en Y para dispersión vertical
+            photoSprite.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 5, Math.sin(angle) * radius);
+            
+            // Tamaño un poco mayor para compensar la dispersión (0.8)
+            photoSprite.scale.set(0.8, 0.8, 1); 
             photoGroup.add(photoSprite);
         }
 
-        camera.position.set(0, 5, 15);
+        camera.position.set(0, 8, 20); // Cámara un poco más lejana para ver la dispersión
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
@@ -171,14 +175,10 @@
             controls.update();
 
             saturn.rotation.y += 0.001;
-            ringGroup.rotation.y += 0.0005; 
+            mainOrbitGroup.rotation.y += 0.0003; 
             atmosphereStars.rotation.y += 0.0001; 
 
-            // Titileo
-            atmosphereStars.children.forEach((s, i) => {
-                if (i % 30 === 0) s.material.opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.001 + i) * 0.4);
-            });
-
+            // Fondo sigue a la cámara
             const vector = new THREE.Vector3(0, 0, -100); 
             vector.applyQuaternion(camera.quaternion);
             backgroundPlane.position.copy(camera.position).add(vector);
@@ -186,9 +186,12 @@
 
             const dist = camera.position.distanceTo(scene.position);
             
-            // Lógica de aparición: Frases Y Fotos aparecen cuando estás cerca (7.5)
+            // Lógica de aparición por proximidad
+            // Frases aparecen muy cerca (7.5)
             wordsGroup.children.forEach(w => w.material.opacity = dist < 7.5 ? 1 : 0);
-            photoGroup.children.forEach(p => p.material.opacity = dist < 7.5 ? 1 : 0);
+            
+            // Fotos aparecen a media distancia (12)
+            photoGroup.children.forEach(p => p.material.opacity = dist < 12 ? 1 : 0);
 
             renderer.render(scene, camera);
         }
