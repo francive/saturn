@@ -109,38 +109,47 @@
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
-        // --- CORRECCIÓN: DISCO GRUESO Y BRILLANTE (GLOWING DISK) ---
-        // Usamos PlaneGeometry para tener un disco denso que brille (como image_7.png)
-        const glowRingGeo = new THREE.PlaneGeometry(10, 10);
-        
-        // Shader para crear el efecto de brillo denso
-        const glowRingMat = new THREE.ShaderMaterial({
-            uniforms: {
-                color: { value: new THREE.Color(0xFFD700) } // Amarillo incandescente
-            },
-            vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                    vUv = uv;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-                }
-            `,
-            fragmentShader: `
-                uniform vec3 color;
-                varying vec2 vUv;
-                void main() {
-                    float dist = distance(vUv, vec2(0.5, 0.5));
-                    // Genera un desvanecimiento suave hacia afuera
-                    float alpha = smoothstep(0.5, 0.2, dist) * 0.6;
-                    // Efecto de color más ámbar hacia los bordes
-                    vec3 finalColor = mix(vec3(1.0, 0.8, 0.3), color, smoothstep(0.3, 0.5, dist));
-                    gl_FragColor = vec4(finalColor, alpha);
-                }
-            `,
-            transparent: true,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending // Crucial para que el brillo se sume
-        });
+       // --- CORRECCIÓN: ANILLO CON AGUJERO (Mantiene el brillo pero no atraviesa el planeta) ---
+// Usamos RingGeometry(radioInterno, radioExterno, segmentos)
+// El radio interno de 1.4 es suficiente para que el planeta (1.2) pase por el medio.
+const glowRingGeo = new THREE.RingGeometry(1.4, 5, 64); 
+
+// El material se queda EXACTAMENTE igual para no perder tu efecto de color
+const glowRingMat = new THREE.ShaderMaterial({
+    uniforms: {
+        color: { value: new THREE.Color(0xFFD700) }
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+        }
+    `,
+    fragmentShader: `
+        uniform vec3 color;
+        varying vec2 vUv;
+        void main() {
+            // Nota: En RingGeometry, las UVs se distribuyen de forma distinta, 
+            // pero el efecto de distancia seguirá funcionando para el brillo.
+            float dist = distance(vUv, vec2(0.5, 0.5));
+            float alpha = smoothstep(0.5, 0.2, dist) * 0.6;
+            vec3 finalColor = mix(vec3(1.0, 0.8, 0.3), color, smoothstep(0.3, 0.5, dist));
+            gl_FragColor = vec4(finalColor, alpha);
+        }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+});
+
+const glowRing = new THREE.Mesh(glowRingGeo, glowRingMat);
+// Ya no necesitamos rotarlo en X -90 porque RingGeometry se crea "de frente" 
+// y el ringGroup ya tiene la inclinación de 15 grados que te gusta.
+// Si ves que queda "parado", deja esta línea:
+glowRing.rotation.x = 0; // O bórrala, ya que el grupo manda.
+glowRing.position.y = -0.05; 
+ringGroup.add(glowRing);
 
         const glowRing = new THREE.Mesh(glowRingGeo, glowRingMat);
         glowRing.rotation.x = -Math.PI / 2; // Acostado
