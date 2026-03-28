@@ -43,7 +43,6 @@
         const scene = new THREE.Scene();
         const textureLoader = new THREE.TextureLoader();
 
-        // MANEJO DE AUDIO
         const audio = document.getElementById('backgroundAudio');
         const volumeSlider = document.getElementById('volumeRange');
         
@@ -71,7 +70,7 @@
         renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // 2. SATURNO CON RESPLANDOR ATMOSFÉRICO
+        // 2. SATURNO
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
             new THREE.MeshBasicMaterial({ map: textureLoader.load('saturno.jpg') })
@@ -100,19 +99,18 @@
         const atmosGlow = new THREE.Mesh(new THREE.SphereGeometry(1.35, 64, 64), atmosGlowMat);
         scene.add(atmosGlow);
 
-        // 3. GRUPOS DE ANILLOS Y PALABRAS
+        // 3. GRUPOS
         const ringGroup = new THREE.Group();
         const starsGroup = new THREE.Group();
         const wordsGroup = new THREE.Group();
-        // Mantenemos tu ángulo de inclinación original
         ringGroup.rotation.x = Math.PI * 0.15;
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
-        // --- CORRECCIÓN FINAL: PATRÓN DE TRES ANILLOS GRUESOS Y ANCHOS ---
-        const patternRingGeo = new THREE.PlaneGeometry(10, 10);
+        // --- CORRECCIÓN: ANILLOS CERCANOS, ANCHOS Y SIN CORTES ---
+        // Aumentamos el tamaño del plano a 20x20 para que los anillos no se corten en los bordes
+        const patternRingGeo = new THREE.PlaneGeometry(20, 20);
         
-        // ShaderMaterial para calcular matemáticamente las tres franjas ANCHAS
         const patternRingMat = new THREE.ShaderMaterial({
             vertexShader: `
                 varying vec2 vUv;
@@ -124,49 +122,41 @@
             fragmentShader: `
                 varying vec2 vUv;
                 void main() {
-                    // Calculamos la distancia desde el centro del plano (Saturno)
                     float dist = distance(vUv, vec2(0.5, 0.5));
                     
-                    // --- FÓRMULA DEL PATRÓN DE 3 ANILLOS GRUESOS ---
-                    // CORRECCIÓN: Reducimos la frecuencia de 60.0 a 28.0.
-                    // Esto hace que las franjas amarillas sean mucho más ANCHAS.
-                    float ringPattern = sin(dist * 28.0);
+                    // Bajamos la frecuencia a 18.0 para que las franjas sean mucho más anchas
+                    float ringPattern = sin(dist * 18.0);
                     
-                    // CORRECCIÓN: Suavizamos la transición para un look de "polvo denso" difuso.
-                    // Cambiamos de 0.1-0.8 a 0.0-0.5.
-                    float bands = smoothstep(0.0, 0.5, ringPattern);
+                    // Ajustamos el difuminado para que parezcan anillos masivos y no líneas finas
+                    float bands = smoothstep(-0.2, 0.5, ringPattern);
                     
-                    // Aseguramos un hueco central para Saturno y un límite externo.
-                    // El anillo solo existe entre dist 0.22 y 0.5.
-                    float mask = smoothstep(0.22, 0.3, dist) * (1.0 - smoothstep(0.48, 0.6, dist));
+                    // Máscara: Iniciamos en 0.12 para que estén pegados al planeta
+                    // Terminamos en 0.48 para aprovechar el espacio del plano 20x20 sin cortes rectos
+                    float mask = smoothstep(0.12, 0.18, dist) * (1.0 - smoothstep(0.45, 0.48, dist));
                     
-                    // Combinamos las bandas con la máscara y el color
-                    float alpha = bands * mask * 0.7; // Opacidad final
-                    vec3 color = vec3(1.0, 0.85, 0.3); // Color amarillo oro incandescente
+                    float alpha = bands * mask * 0.7;
+                    vec3 color = vec3(1.0, 0.88, 0.4); 
                     
                     gl_FragColor = vec4(color, alpha);
                 }
             `,
             transparent: true,
             depthWrite: false,
-            blending: THREE.AdditiveBlending, // Brillo denso aditivo
-            side: THREE.DoubleSide // Visible desde arriba y abajo
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide
         });
 
         const patternRing = new THREE.Mesh(patternRingGeo, patternRingMat);
-        patternRing.rotation.x = -Math.PI / 2; // Acostado dentro del grupo inclinado
-        patternRing.scale.set(1.5, 1.5, 1); // Lo escalamos para que sea ancho
-        patternRing.position.y = -0.05; // Base brillante debajo de las letras
+        patternRing.rotation.x = -Math.PI / 2;
+        // Ajustamos la escala para que el plano cubra el área deseada correctamente
+        patternRing.scale.set(1.1, 1.1, 1); 
+        patternRing.position.y = -0.05; 
         ringGroup.add(patternRing);
 
-        // Partículas de "Polvo" (Imagen 1: destello.png) - Mantenemos la densidad
+        // Partículas de Polvo
         const destelloTexture = textureLoader.load('destello.png');
         const starMat = new THREE.SpriteMaterial({ 
-            map: destelloTexture, 
-            transparent: true, 
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            opacity: 0.8
+            map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8
         });
 
         for (let i = 0; i < 4000; i++) {
@@ -179,7 +169,7 @@
             starsGroup.add(star);
         }
 
-        // 4. PALABRAS (Te amo, Flores amarillas) - Flotando sobre los nuevos anillos
+        // Palabras
         const loveWords = ["Te amo", "✨ Eres muy especial ✨", "Flores amarillas", "Nuestro Amor", "Te adoro", "Siempre brillas", "Flores para ti", "Infinito", "Destino", "Te adoro", "Gracia", "Cielo"];
         
         for(let i = 0; i < 400; i++) {
@@ -195,14 +185,13 @@
 
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.2 + Math.pow(Math.random(), 0.5) * 3.8; 
-            // Posicionadas para que floten SOBRE el disco sólido de polvo (+0.15)
             wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
             wordSprite.scale.set(0.1, 0.025, 1); 
             wordSprite.material.opacity = 0;
             wordsGroup.add(wordSprite);
         }
 
-        // 5. ESTRELLAS FUGACES
+        // Estrellas Fugaces
         const shootingStars = [];
         const shootingStarMat = new THREE.SpriteMaterial({
             map: destelloTexture, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false
@@ -229,7 +218,6 @@
             saturn.rotation.y += 0.001;
             ringGroup.rotation.y += 0.0003;
 
-            // Fondo con seguimiento
             const vector = new THREE.Vector3(0, 0, -50); 
             vector.applyQuaternion(camera.quaternion);
             backgroundPlane.position.copy(camera.position).add(vector);
@@ -250,7 +238,6 @@
 
             const dist = camera.position.distanceTo(scene.position);
             if (dist < 7.5) {
-                // Al hacer zoom, baja brillo del anillo de polvo para resaltar palabras
                 wordsGroup.children.forEach(w => w.material.opacity = 1);
                 patternRing.material.opacity = 0.5;
             } else {
