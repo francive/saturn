@@ -109,9 +109,9 @@
 
         const destelloTexture = textureLoader.load('destello.png');
 
-        // --- CORRECCIÓN FINAL: NUBE DE PUNTOS VOLUMÉTRICA (VOLUMETRIC POINTS CLOUD) ---
-        // Generamos miles de puntos individuales para crear el anillo (como image_8.png but full circle)
-        const particleCount = 15000;
+        // --- CORRECCIÓN: ANILLO DEFINIDO DE POLVO BRILLANTE ---
+        // Generamos partículas que se concentran en un anillo geométrico con hueco central (como image_11.png)
+        const particleCount = 15000; // Alta densidad (como image_10.png)
         const positions = new Float32Array(particleCount * 3);
         const colors = new Float32Array(particleCount * 3);
         
@@ -120,18 +120,15 @@
 
         for (let i = 0; i < particleCount; i++) {
             const angle = Math.random() * Math.PI * 2;
-            
-            // Radio: Asegura el hueco central y dispersión externa (como image_8.png)
-            const radius = 2.2 + Math.pow(Math.random(), 0.5) * 4.0; 
-            
+            // Definimos el ancho del anillo (hueco de 2.0 a 4.0)
+            const radius = 2.0 + Math.pow(Math.random(), 0.7) * 4.0; 
             positions[i * 3] = Math.cos(angle) * radius;
-            // Variación en Y para dar volumen 3D al anillo
-            positions[i * 3 + 1] = (Math.random() - 0.5) * 0.25; 
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 0.15; // Variación en Y para volumen
             positions[i * 3 + 2] = Math.sin(angle) * radius;
 
-            // Degradado de color del centro (amarillo) hacia afuera (blanco/ámbar)
-            const colorRatio = (radius - 2.2) / 4.0;
-            const finalColor = amarillo.clone().lerp(blanco, colorRatio * 0.6);
+            // Degradado de color del centro amarillo hacia afuera blanco (como image_11.png)
+            const colorRatio = (radius - 2.0) / 4.0;
+            const finalColor = amarillo.clone().lerp(blanco, colorRatio);
             colors[i * 3] = finalColor.r;
             colors[i * 3 + 1] = finalColor.g;
             colors[i * 3 + 2] = finalColor.b;
@@ -141,41 +138,41 @@
         pointGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         pointGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-        // Material de puntos: Crea el efecto de "polvo brillante incandescente" (like image_8.png)
+        // Material de puntos que crea el efecto de "polvo brillante" denso
         const pointMaterial = new THREE.PointsMaterial({
-            size: 0.12,
+            size: 0.1,
             map: destelloTexture,
             transparent: true,
-            blending: THREE.AdditiveBlending, // Brillo aditivo
+            blending: THREE.AdditiveBlending, // Brillo aditivo (como image_11.png)
             depthWrite: false, // Evita que se corten entre sí
             vertexColors: true, // Usa los colores calculados
             sizeAttenuation: true // Se hacen más pequeños de lejos
         });
 
         const volumetricRing = new THREE.Points(pointGeometry, pointMaterial);
+        // Posicionado ligeramente ABAJO para que las letras floten arriba
+        volumetricRing.position.y = -0.1;
         ringGroup.add(volumetricRing);
 
         // 4. PALABRAS
-        const loveWords = ["Infinito", "Destino", "Magia", "Luz", "Cielo", "Vida", "Tesoro", "Esencia", "Eternidad", "Suspiro", "Latido", "Universo", "Alma", "Poesía", "Sueño", "Dulzura", "Pasión", "Ternura", "Compromiso", "Refugio", "Paz", "Felicidad", "Amanecer", "Estrella", "Milagro", "Gracia", "Encanto", "Adoración", "Lealtad", "Sinceridad", "Abrazo", "Beso", "Calma", "Fuego", "Unión", "Raíz", "Brillo", "Anhelo", "Valentía", "Cuidado", "Respeto", "Incondicional", "Mundo"];
-
+        const loveWords = ["Te amo", "Flores amarillas", "Mi flor favorita", "Un detalle amarillo", "✨ Eres muy especial ✨", "Siempre brillas", "Flores para ti", "Nuestro Amor", "Infinito", "Destino", "Te adoro", "Gracia", "Cielo"];
+        
         for(let i = 0; i < 400; i++) {
-            const randomText = loveWords[Math.floor(Math.random() * loveWords.length)];
+            const randomText = loveWords[i % loveWords.length];
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 256; canvas.height = 64;
-            ctx.shadowColor = "white"; ctx.shadowBlur = 8;
-            ctx.font = 'Bold 38px Georgia'; ctx.fillStyle = '#FFFFFF';
-            ctx.textAlign = 'center'; ctx.fillText(randomText, 128, 45);
+            canvas.width = 128; canvas.height = 32;
+            ctx.shadowColor = "white"; ctx.shadowBlur = 5; ctx.font = '28px Georgia'; ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.fillText(randomText, 64, 28);
 
             const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
                 map: new THREE.CanvasTexture(canvas), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
             }));
 
             const angle = Math.random() * Math.PI * 2;
-            const radius = 2.6 + Math.random() * 3.5;
-            // Elevamos las palabras ligeramente sobre la nube de polvo (+0.2)
-            wordSprite.position.set(Math.cos(angle) * radius, 0.2, Math.sin(angle) * radius);
-            wordSprite.scale.set(0.2, 0.06, 1); 
+            const radius = 2.2 + Math.pow(Math.random(), 0.5) * 3.8; 
+            // Posicionadas para que floten SOBRE el anillo de polvo
+            wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
+            wordSprite.scale.set(0.1, 0.025, 1); 
             wordSprite.material.opacity = 0;
             wordsGroup.add(wordSprite);
         }
@@ -227,8 +224,8 @@
             if (Math.random() < 0.012) spawnShootingStar();
 
             const dist = camera.position.distanceTo(scene.position);
-            if (dist < 8.0) {
-                // Baja brillo polvo para resaltar palabras
+            if (dist < 7.5) {
+                // Al hacer zoom, baja brillo del anillo de polvo para resaltar palabras
                 volumetricRing.material.opacity = 0.5;
                 wordsGroup.children.forEach(w => w.material.opacity = 1);
             } else {
