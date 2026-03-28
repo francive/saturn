@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Un Universo Infinito para Ti</title>
+    <title>Un Universo para Ti - Mejorado</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
@@ -60,9 +60,7 @@
         const bgGeometry = new THREE.PlaneGeometry(200, 120);
         const bgMaterial = new THREE.MeshBasicMaterial({ 
             map: bgTexture, 
-            transparent: true, 
-            opacity: 1.0,
-            depthWrite: false
+            transparent: true, depthWrite: false
         });
         const backgroundPlane = new THREE.Mesh(bgGeometry, bgMaterial);
         scene.add(backgroundPlane);
@@ -73,35 +71,34 @@
         renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // 2. SATURNO Y ATMÓSFERA
+        // 2. SATURNO CON RESPLANDOR ATMOSFÉRICO
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
             new THREE.MeshBasicMaterial({ map: textureLoader.load('saturno.jpg') })
         );
         scene.add(saturn);
 
-        const atmosGlow = new THREE.Mesh(
-            new THREE.SphereGeometry(1.35, 64, 64),
-            new THREE.ShaderMaterial({
-                vertexShader: `
-                    varying vec3 vNormal;
-                    void main() {
-                        vNormal = normalize( normalMatrix * normal );
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-                    }
-                `,
-                fragmentShader: `
-                    varying vec3 vNormal;
-                    void main() {
-                        float intensity = pow( 0.6 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ), 4.0 );
-                        gl_FragColor = vec4( 1.0, 0.9, 0.7, 1.0 ) * intensity;
-                    }
-                `,
-                side: THREE.BackSide,
-                blending: THREE.AdditiveBlending,
-                transparent: true
-            })
-        );
+        const atmosGlowGeo = new THREE.SphereGeometry(1.35, 64, 64);
+        const atmosGlowMat = new THREE.ShaderMaterial({
+            vertexShader: `
+                varying vec3 vNormal;
+                void main() {
+                    vNormal = normalize( normalMatrix * normal );
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vNormal;
+                void main() {
+                    float intensity = pow( 0.6 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ), 4.0 );
+                    gl_FragColor = vec4( 1.0, 0.9, 0.7, 1.0 ) * intensity;
+                }
+            `,
+            side: THREE.BackSide,
+            blending: THREE.AdditiveBlending,
+            transparent: true
+        });
+        const atmosGlow = new THREE.Mesh(atmosGlowGeo, atmosGlowMat);
         scene.add(atmosGlow);
 
         // 3. GRUPOS DE ANILLOS Y PALABRAS
@@ -112,40 +109,60 @@
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
-        // NUEVO: ANILLOS DE LUZ (GLOW) DEBAJO DE LAS LETRAS
-        const createGlowRing = (radius, color) => {
-            const geometry = new THREE.RingGeometry(radius, radius + 0.05, 128);
-            const material = new THREE.MeshBasicMaterial({ 
-                color: color, 
-                side: THREE.DoubleSide, 
-                transparent: true, 
-                opacity: 0.6,
-                blending: THREE.AdditiveBlending 
-            });
-            const ring = new THREE.Mesh(geometry, material);
-            ring.rotation.x = Math.PI / 2;
-            ring.position.y = -0.1; // Ajustado para que las letras floten arriba
-            return ring;
-        };
+        // --- CORRECCIÓN: DISCO GRUESO Y BRILLANTE (GLOWING DISK) ---
+        // Usamos PlaneGeometry para tener un disco denso que brille (como image_7.png)
+        const glowRingGeo = new THREE.PlaneGeometry(10, 10);
+        
+        // Shader para crear el efecto de brillo denso
+        const glowRingMat = new THREE.ShaderMaterial({
+            uniforms: {
+                color: { value: new THREE.Color(0xFFD700) } // Amarillo incandescente
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 color;
+                varying vec2 vUv;
+                void main() {
+                    float dist = distance(vUv, vec2(0.5, 0.5));
+                    // Genera un desvanecimiento suave hacia afuera
+                    float alpha = smoothstep(0.5, 0.2, dist) * 0.6;
+                    // Efecto de color más ámbar hacia los bordes
+                    vec3 finalColor = mix(vec3(1.0, 0.8, 0.3), color, smoothstep(0.3, 0.5, dist));
+                    gl_FragColor = vec4(finalColor, alpha);
+                }
+            `,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending // Crucial para que el brillo se sume
+        });
 
-        const ringAmarillo = createGlowRing(3.5, 0xFFD700); 
-        const ringCeleste = createGlowRing(2.2, 0x00FFFF);  
-        ringGroup.add(ringAmarillo, ringCeleste);
+        const glowRing = new THREE.Mesh(glowRingGeo, glowRingMat);
+        glowRing.rotation.x = -Math.PI / 2; // Acostado
+        glowRing.scale.set(1.5, 1.5, 1); // Lo escalamos para que sea ancho
+        glowRing.position.y = -0.05; // Base brillante debajo de las letras
+        ringGroup.add(glowRing);
 
+        // Partículas (más dispersas para dar textura)
         const destelloTexture = textureLoader.load('destello.png');
         const starMat = new THREE.SpriteMaterial({ 
             map: destelloTexture, 
             transparent: true, 
             blending: THREE.AdditiveBlending,
             depthWrite: false,
-            opacity: 0.9
+            opacity: 0.8
         });
 
-        for (let i = 0; i < 3500; i++) {
+        for (let i = 0; i < 4000; i++) {
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.8; 
             const star = new THREE.Sprite(starMat.clone());
-            const s = Math.random() * 0.06 + 0.02; 
+            const s = Math.random() * 0.08 + 0.02; 
             star.scale.set(s, s, 1);
             star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.15, Math.sin(angle) * radius);
             starsGroup.add(star);
@@ -169,8 +186,8 @@
 
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.6 + Math.random() * 3.0;
-            // Elevamos las palabras para que el anillo pase por debajo
-            wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
+            // Elevamos las palabras para que el disco brillante pase por debajo
+            wordSprite.position.set(Math.cos(angle) * radius, 0.1, Math.sin(angle) * radius);
             wordSprite.scale.set(0.2, 0.06, 1); 
             wordSprite.material.opacity = 0;
             wordsGroup.add(wordSprite);
@@ -184,11 +201,9 @@
 
         function spawnShootingStar() {
             const star = new THREE.Sprite(shootingStarMat.clone());
-            const startX = (Math.random() - 0.5) * 150;
-            const startY = (Math.random() - 0.5) * 100;
-            star.position.set(startX, startY, -45); 
+            star.position.set((Math.random()-0.5)*150, (Math.random()-0.5)*100, -45); 
             star.scale.set(6, 0.3, 1); 
-            star.userData.velocity = new THREE.Vector3((Math.random() - 0.5) * 15, (Math.random() - 0.5) * 10, 0);
+            star.userData.velocity = new THREE.Vector3((Math.random()-0.5)*15, (Math.random()-0.5)*10, 0);
             star.userData.opacity = 1.0;
             scene.add(star);
             shootingStars.push(star);
@@ -205,6 +220,7 @@
             saturn.rotation.y += 0.001;
             ringGroup.rotation.y += 0.0003;
 
+            // Fondo con seguimiento
             const vector = new THREE.Vector3(0, 0, -50); 
             vector.applyQuaternion(camera.quaternion);
             backgroundPlane.position.copy(camera.position).add(vector);
