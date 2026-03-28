@@ -142,7 +142,7 @@
         const destelloTexture = textureLoader.load('destello.png');
         const starMat = new THREE.SpriteMaterial({ 
             map: destelloTexture, 
-            transparent: true,Blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8
+            transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8
         });
 
         // Usamos menos partículas pero más dispersas para dar textura sobre el disco sólido (como image_10.png)
