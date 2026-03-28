@@ -77,38 +77,41 @@
 
         const destelloTexture = textureLoader.load('destello.png');
 
-        // --- CAPA 1: 10,000 ESTRELLAS EN LA ESFERA (ATMÓSFERA) ---
-        for (let i = 0; i < 10000; i++) {
+        // --- CAPA 1: 50,000 ESTRELLAS EN LA ESFERA (ULTRA-POBLADO) ---
+        // Aumentado x5 la cantidad para rellenar completamente el espacio
+        for (let i = 0; i < 50000; i++) {
             const starMat = new THREE.SpriteMaterial({ 
-                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: Math.random() * 0.5 + 0.2
+                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: Math.random() * 0.4 + 0.1
             });
             const star = new THREE.Sprite(starMat);
-            const r = Math.random() * 10; 
+            const r = Math.random() * 11; // Radio ligeramente mayor
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos((Math.random() * 2) - 1);
             star.position.set(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
-            const s = Math.random() * 0.03 + 0.01;
+            const s = Math.random() * 0.03 + 0.005;
             star.scale.set(s, s, 1);
             atmosphereStars.add(star);
         }
 
-        // --- CAPA 2: ESTRELLAS DEL ANILLO (PLANAS Y DENSAS) ---
-        for (let i = 0; i < 3000; i++) {
+        // --- CAPA 2: ESTRELLAS DEL ANILLO (15,000 - DISCO REPLETO) ---
+        // Aumentado x5 para que el disco sea una masa densa de brillos
+        for (let i = 0; i < 15000; i++) {
             const starMat = new THREE.SpriteMaterial({ 
-                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 
+                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: Math.random() * 0.6 + 0.3 
             });
             const star = new THREE.Sprite(starMat);
             const angle = Math.random() * Math.PI * 2;
-            const radius = 1.8 + Math.random() * 3.5; // Concentradas en el área de los anillos
-            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.05, Math.sin(angle) * radius);
-            const s = Math.random() * 0.06 + 0.02;
+            const radius = 1.6 + Math.pow(Math.random(), 0.5) * 3.7; // Concentradas densamente en los anillos
+            // Espesor en Y muy bajo para mantener la forma de disco plano
+            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.08, Math.sin(angle) * radius);
+            const s = Math.random() * 0.05 + 0.01;
             star.scale.set(s, s, 1);
             ringStars.add(star);
         }
 
         // --- ANILLOS VISUALES ---
         const ringMat = new THREE.MeshBasicMaterial({ 
-            color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false
+            color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false
         });
         const rings = [new THREE.RingGeometry(1.8, 3.2, 128), new THREE.RingGeometry(3.5, 4.8, 128)];
         rings.forEach(geo => {
@@ -117,7 +120,7 @@
             ringGroup.add(mesh);
         });
 
-        // --- CAPA 3: PALABRAS (EN EL ANILLO) ---
+        // --- CAPA 3: PALABRAS (EN EL ANILLO - ACTIVACIÓN CERCANA) ---
         const loveWords = ["Te amo", "✨ Eres muy especial ✨", "Flores amarillas", "Nuestro Amor", "Te adoro", "Siempre brillas", "Flores para ti", "Infinito", "Destino", "Gracia", "Cielo"];
         for(let i = 0; i < 150; i++) {
             const canvas = document.createElement('canvas');
@@ -130,8 +133,9 @@
             }));
 
             const angle = Math.random() * Math.PI * 2;
-            const radius = 2.2 + Math.random() * 3; 
-            wordSprite.position.set(Math.cos(angle) * radius, 0.1, Math.sin(angle) * radius);
+            const radius = 2.0 + Math.random() * 3.3; 
+            // Posicionadas ligeramente más arriba del plano de estrellas del anillo
+            wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
             wordSprite.scale.set(0.4, 0.1, 1); 
             wordsGroup.add(wordSprite);
         }
@@ -146,11 +150,11 @@
 
             saturn.rotation.y += 0.001;
             ringGroup.rotation.y += 0.0005; // Los anillos, sus estrellas y palabras rotan juntos
-            atmosphereStars.rotation.y += 0.0001; // La esfera exterior rota lento
+            atmosphereStars.rotation.y += 0.00008; // La esfera exterior rota muy lento
 
-            // Titileo solo para la atmósfera exterior
+            // Titileo sutil para la masa de la atmósfera exterior
             atmosphereStars.children.forEach((s, i) => {
-                if (i % 15 === 0) s.material.opacity = 0.2 + Math.abs(Math.sin(Date.now() * 0.001 + i));
+                if (i % 20 === 0) s.material.opacity = 0.1 + Math.abs(Math.sin(Date.now() * 0.001 + i) * 0.4);
             });
 
             // Fondo infinito
@@ -160,7 +164,8 @@
             backgroundPlane.quaternion.copy(camera.quaternion);
 
             const dist = camera.position.distanceTo(scene.position);
-            wordsGroup.children.forEach(w => w.material.opacity = dist < 12 ? 1 : 0);
+            // CORRECCIÓN: Se activa solo cuando estás cerquita cerquita (< 7.5)
+            wordsGroup.children.forEach(w => w.material.opacity = dist < 7.5 ? 1 : 0);
 
             renderer.render(scene, camera);
         }
