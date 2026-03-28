@@ -107,8 +107,8 @@
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
-        // --- CORRECCIÓN: ANILLOS CERCANOS, ANCHOS Y SIN CORTES ---
-        // Aumentamos el tamaño del plano a 20x20 para que los anillos no se corten en los bordes
+        // --- CORRECCIÓN: SEPARACIÓN MÍNIMA Y RADIO AJUSTADO ---
+        // Usamos un plano de 20x20 para que no haya cortes rectos en los bordes
         const patternRingGeo = new THREE.PlaneGeometry(20, 20);
         
         const patternRingMat = new THREE.ShaderMaterial({
@@ -124,17 +124,18 @@
                 void main() {
                     float dist = distance(vUv, vec2(0.5, 0.5));
                     
-                    // Bajamos la frecuencia a 18.0 para que las franjas sean mucho más anchas
-                    float ringPattern = sin(dist * 18.0);
+                    // Aumentamos frecuencia para franjas más densas y juntas
+                    float ringPattern = sin(dist * 24.0);
                     
-                    // Ajustamos el difuminado para que parezcan anillos masivos y no líneas finas
-                    float bands = smoothstep(-0.2, 0.5, ringPattern);
+                    // Engrosamos las franjas amarillas para reducir el espacio negro
+                    float bands = smoothstep(-0.4, 0.4, ringPattern);
                     
-                    // Máscara: Iniciamos en 0.12 para que estén pegados al planeta
-                    // Terminamos en 0.48 para aprovechar el espacio del plano 20x20 sin cortes rectos
-                    float mask = smoothstep(0.12, 0.18, dist) * (1.0 - smoothstep(0.45, 0.48, dist));
+                    // MÁSCARA: 
+                    // Empieza en 0.12 (pegado al planeta)
+                    // Termina en 0.35 (radio reducido para que el anillo grande esté cerca del centro)
+                    float mask = smoothstep(0.12, 0.15, dist) * (1.0 - smoothstep(0.32, 0.35, dist));
                     
-                    float alpha = bands * mask * 0.7;
+                    float alpha = bands * mask * 0.8;
                     vec3 color = vec3(1.0, 0.88, 0.4); 
                     
                     gl_FragColor = vec4(color, alpha);
@@ -148,8 +149,7 @@
 
         const patternRing = new THREE.Mesh(patternRingGeo, patternRingMat);
         patternRing.rotation.x = -Math.PI / 2;
-        // Ajustamos la escala para que el plano cubra el área deseada correctamente
-        patternRing.scale.set(1.1, 1.1, 1); 
+        patternRing.scale.set(1.0, 1.0, 1.0); 
         patternRing.position.y = -0.05; 
         ringGroup.add(patternRing);
 
