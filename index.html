@@ -97,23 +97,23 @@
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
-        // --- NUEVA LÓGICA DE ANILLOS DUPLICADOS (SÓLIDOS) ---
+        // --- ANILLOS ANCHOS Y CERCANOS ---
         const ringMat = new THREE.MeshBasicMaterial({ 
             color: 0xffe066, 
             side: THREE.DoubleSide, 
             transparent: true, 
-            opacity: 0.8,
+            opacity: 0.9, // Brillo constante
             blending: THREE.AdditiveBlending 
         });
 
-        // Anillo Externo
-        const outerRingGeo = new THREE.RingGeometry(4.2, 4.5, 128);
+        // Anillo Externo (Muy ancho)
+        const outerRingGeo = new THREE.RingGeometry(3.5, 4.8, 128); 
         const outerRing = new THREE.Mesh(outerRingGeo, ringMat);
         outerRing.rotation.x = Math.PI / 2;
         ringGroup.add(outerRing);
 
-        // Anillo Interno (Copia más pequeña y cercana)
-        const innerRingGeo = new THREE.RingGeometry(3.6, 3.9, 128);
+        // Anillo Interno (Pegado al planeta y más ancho)
+        const innerRingGeo = new THREE.RingGeometry(1.8, 3.2, 128); 
         const innerRing = new THREE.Mesh(innerRingGeo, ringMat);
         innerRing.rotation.x = Math.PI / 2;
         ringGroup.add(innerRing);
@@ -124,9 +124,9 @@
             map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8
         });
 
-        for (let i = 0; i < 4000; i++) {
+        for (let i = 0; i < 4500; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.8; 
+            const radius = 1.5 + Math.pow(Math.random(), 0.5) * 4.5; 
             const star = new THREE.Sprite(starMat.clone());
             const s = Math.random() * 0.08 + 0.02; 
             star.scale.set(s, s, 1);
@@ -149,9 +149,9 @@
             }));
 
             const angle = Math.random() * Math.PI * 2;
-            const radius = 2.2 + Math.pow(Math.random(), 0.5) * 3.8; 
+            const radius = 1.8 + Math.pow(Math.random(), 0.5) * 4.2; 
             wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
-            wordSprite.scale.set(0.1, 0.025, 1); 
+            wordSprite.scale.set(0.12, 0.03, 1); 
             wordSprite.material.opacity = 0;
             wordsGroup.add(wordSprite);
         }
@@ -172,7 +172,7 @@
             shootingStars.push(star);
         }
 
-        camera.position.set(0, 3, 10);
+        camera.position.set(0, 4, 12);
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
@@ -201,15 +201,12 @@
 
             if (Math.random() < 0.012) spawnShootingStar();
 
+            // Muestra palabras al acercarse, pero los anillos se quedan brillantes
             const dist = camera.position.distanceTo(scene.position);
-            if (dist < 7.5) {
+            if (dist < 8.5) {
                 wordsGroup.children.forEach(w => w.material.opacity = 1);
-                outerRing.material.opacity = 0.4;
-                innerRing.material.opacity = 0.4;
             } else {
                 wordsGroup.children.forEach(w => w.material.opacity = 0);
-                outerRing.material.opacity = 0.8;
-                innerRing.material.opacity = 0.8;
             }
 
             renderer.render(scene, camera);
