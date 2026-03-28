@@ -6,21 +6,12 @@
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
-        
         #audio-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 8px;
-            backdrop-filter: blur(5px);
-            color: white;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255, 255, 255, 0.1); padding: 10px;
+            border-radius: 8px; backdrop-filter: blur(5px);
+            color: white; z-index: 100; display: flex;
+            align-items: center; gap: 10px; border: 1px solid rgba(255, 255, 255, 0.2);
         }
         input[type=range] { cursor: pointer; }
     </style>
@@ -43,27 +34,18 @@
         const scene = new THREE.Scene();
         const textureLoader = new THREE.TextureLoader();
 
-        // MANEJO DE AUDIO
         const audio = document.getElementById('backgroundAudio');
         const volumeSlider = document.getElementById('volumeRange');
-        
-        window.addEventListener('click', () => {
-            audio.play();
-        }, { once: true });
-
-        volumeSlider.addEventListener('input', (e) => {
-            audio.volume = e.target.value;
-        });
+        window.addEventListener('click', () => { audio.play(); }, { once: true });
+        volumeSlider.addEventListener('input', (e) => { audio.volume = e.target.value; });
 
         // 1. FONDO
         const bgTexture = textureLoader.load('estrellas.jpg'); 
-        const bgGeometry = new THREE.PlaneGeometry(200, 120);
-        const bgMaterial = new THREE.MeshBasicMaterial({ 
-            map: bgTexture, 
-            transparent: true, depthWrite: false
-        });
-        const backgroundPlane = new THREE.Mesh(bgGeometry, bgMaterial);
-        scene.add(backgroundPlane);
+        const bgPlane = new THREE.Mesh(
+            new THREE.PlaneGeometry(200, 120),
+            new THREE.MeshBasicMaterial({ map: bgTexture, transparent: true, depthWrite: false })
+        );
+        scene.add(bgPlane);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2500);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -71,73 +53,35 @@
         renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // 2. SATURNO CON RESPLANDOR ATMOSFÉRICO
+        // 2. SATURNO
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
             new THREE.MeshBasicMaterial({ map: textureLoader.load('saturno.jpg') })
         );
         scene.add(saturn);
 
-        const atmosGlowMat = new THREE.ShaderMaterial({
-            vertexShader: `
-                varying vec3 vNormal;
-                void main() {
-                    vNormal = normalize( normalMatrix * normal );
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-                }
-            `,
-            fragmentShader: `
-                varying vec3 vNormal;
-                void main() {
-                    float intensity = pow( 0.6 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ), 4.0 );
-                    gl_FragColor = vec4( 1.0, 0.9, 0.7, 1.0 ) * intensity;
-                }
-            `,
-            side: THREE.BackSide,
-            blending: THREE.AdditiveBlending,
-            transparent: true
-        });
-        const atmosGlow = new THREE.Mesh(new THREE.SphereGeometry(1.35, 64, 64), atmosGlowMat);
-        scene.add(atmosGlow);
+        // 3. ANILLOS E INCLINACIÓN (25 GRADOS)
+        const ROTACION_X = Math.PI * 0.14; // Los 25 grados exactos
 
-        // 3. ELEMENTOS DEL ANILLO (Inclinación individual a 25°)
-        const angle25 = Math.PI * 0.14; // Aproximadamente 25 grados
-
-        // --- ANILLO SÓLIDO AMARILLO ---
-        const solidRingGeo = new THREE.RingGeometry(2.2, 4.0, 128);
-        const solidRingMat = new THREE.ShaderMaterial({
-            vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                    vUv = uv;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-                }
-            `,
-            fragmentShader: `
-                varying vec2 vUv;
-                void main() {
-                    float intensity = smoothstep(0.0, 1.0, vUv.y);
-                    gl_FragColor = vec4(1.0, 0.85, 0.3, 1.0) * intensity;
-                }
-            `,
-            transparent: true, depthWrite: false,
-            side: THREE.DoubleSide, blending: THREE.AdditiveBlending 
-        });
-
-        const solidRing = new THREE.Mesh(solidRingGeo, solidRingMat);
-        solidRing.rotation.x = angle25; // Inclinación corregida
-        solidRing.position.y = -0.05; 
+        // ANILLO SÓLIDO AMARILLO
+        const solidRing = new THREE.Mesh(
+            new THREE.RingGeometry(2.2, 4.0, 128),
+            new THREE.ShaderMaterial({
+                vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+                fragmentShader: `varying vec2 vUv; void main() { float intensity = smoothstep(0.0, 1.0, vUv.y); gl_FragColor = vec4(1.0, 0.85, 0.3, 1.0) * intensity; }`,
+                transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending 
+            })
+        );
+        solidRing.rotation.x = ROTACION_X;
         scene.add(solidRing);
 
-        // --- GRUPO DE PARTÍCULAS (ESTRELLAS) ---
+        // GRUPO DE PARTÍCULAS
         const starsGroup = new THREE.Group();
-        starsGroup.rotation.x = angle25; // Misma inclinación que el anillo
+        starsGroup.rotation.x = ROTACION_X; // Mismo ángulo que el anillo
         scene.add(starsGroup);
 
-        const destelloTexture = textureLoader.load('destello.png');
         const starMat = new THREE.SpriteMaterial({ 
-            map: destelloTexture, 
-            transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8
+            map: textureLoader.load('destello.png'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 
         });
 
         for (let i = 0; i < 4000; i++) {
@@ -146,50 +90,28 @@
             const star = new THREE.Sprite(starMat.clone());
             const s = Math.random() * 0.08 + 0.02; 
             star.scale.set(s, s, 1);
-            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
+            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.05, Math.sin(angle) * radius);
             starsGroup.add(star);
         }
 
-        // 4. PALABRAS (Georgia)
+        // GRUPO DE PALABRAS
         const wordsGroup = new THREE.Group();
-        wordsGroup.rotation.x = angle25; // Misma inclinación que el resto
+        wordsGroup.rotation.x = ROTACION_X;
         scene.add(wordsGroup);
 
         const loveWords = ["Te amo", "✨ Eres muy especial ✨", "Flores amarillas", "Nuestro Amor", "Te adoro", "Siempre brillas", "Flores para ti", "Infinito", "Destino", "Te adoro", "Gracia", "Cielo"];
-        
         for(let i = 0; i < 400; i++) {
-            const randomText = loveWords[i % loveWords.length];
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = 128; canvas.height = 32;
-            ctx.shadowColor = "white"; ctx.shadowBlur = 5; ctx.font = '28px Georgia'; ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.fillText(randomText, 64, 28);
-
-            const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
-                map: new THREE.CanvasTexture(canvas), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
-            }));
-
+            ctx.font = '28px Georgia'; ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.fillText(loveWords[i % loveWords.length], 64, 28);
+            const word = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.2 + Math.pow(Math.random(), 0.5) * 3.8; 
-            wordSprite.position.set(Math.cos(angle) * radius, 0.1, Math.sin(angle) * radius);
-            wordSprite.scale.set(0.1, 0.025, 1); 
-            wordSprite.material.opacity = 0;
-            wordsGroup.add(wordSprite);
-        }
-
-        // 5. ESTRELLAS FUGACES
-        const shootingStars = [];
-        const shootingStarMat = new THREE.SpriteMaterial({
-            map: destelloTexture, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false
-        });
-
-        function spawnShootingStar() {
-            const star = new THREE.Sprite(shootingStarMat.clone());
-            star.position.set((Math.random()-0.5)*150, (Math.random()-0.5)*100, -45); 
-            star.scale.set(6, 0.3, 1); 
-            star.userData.velocity = new THREE.Vector3((Math.random()-0.5)*15, (Math.random()-0.5)*10, 0);
-            star.userData.opacity = 1.0;
-            scene.add(star);
-            shootingStars.push(star);
+            word.position.set(Math.cos(angle) * radius, 0.1, Math.sin(angle) * radius);
+            word.scale.set(0.1, 0.025, 1); 
+            word.material.opacity = 0;
+            wordsGroup.add(word);
         }
 
         camera.position.set(0, 3, 10);
@@ -199,50 +121,27 @@
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
-
             saturn.rotation.y += 0.001;
             
-            // Rotación sobre su propio eje (Y local después de la rotación X)
-            solidRing.rotation.z -= 0.0003; 
+            // CORRECCIÓN CLAVE: Girar en Z para que el movimiento sea izquierda-derecha sobre el plano inclinado
+            solidRing.rotation.z -= 0.0003;
             starsGroup.rotation.z -= 0.0003;
             wordsGroup.rotation.z -= 0.0003;
 
-            // Fondo con seguimiento
-            const vector = new THREE.Vector3(0, 0, -50); 
-            vector.applyQuaternion(camera.quaternion);
-            backgroundPlane.position.copy(camera.position).add(vector);
-            backgroundPlane.quaternion.copy(camera.quaternion);
-
-            for (let i = shootingStars.length - 1; i >= 0; i--) {
-                const star = shootingStars[i];
-                star.position.add(star.userData.velocity);
-                star.userData.opacity -= 0.02; 
-                star.material.opacity = star.userData.opacity;
-                if (star.userData.opacity <= 0) {
-                    scene.remove(star);
-                    shootingStars.splice(i, 1);
-                }
-            }
-
-            if (Math.random() < 0.012) spawnShootingStar();
+            // Seguimiento de fondo
+            const vector = new THREE.Vector3(0, 0, -50).applyQuaternion(camera.quaternion);
+            bgPlane.position.copy(camera.position).add(vector);
+            bgPlane.quaternion.copy(camera.quaternion);
 
             const dist = camera.position.distanceTo(scene.position);
-            if (dist < 7.5) {
-                wordsGroup.children.forEach(w => w.material.opacity = 1);
-                solidRing.material.opacity = 0.5;
-            } else {
-                wordsGroup.children.forEach(w => w.material.opacity = 0);
-                solidRing.material.opacity = 1;
-            }
+            wordsGroup.children.forEach(w => w.material.opacity = dist < 7.5 ? 1 : 0);
+            solidRing.material.opacity = dist < 7.5 ? 0.5 : 1;
 
             renderer.render(scene, camera);
         }
-
-            animate();
-
+        animate();
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
     </script>
