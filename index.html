@@ -109,11 +109,10 @@
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
-        // --- CORRECCIÓN FINAL: PATRÓN DE TRES ANILLOS (TRIPLE BAND PATTERN) ---
-        // Usamos una PlaneGeometry ancha para que el Shader dibuje el patrón volumétrico.
+        // --- CORRECCIÓN FINAL: PATRÓN DE TRES ANILLOS GRUESOS Y ANCHOS ---
         const patternRingGeo = new THREE.PlaneGeometry(10, 10);
         
-        // ShaderMaterial para calcular matemáticamente las tres franjas de anillo
+        // ShaderMaterial para calcular matemáticamente las tres franjas ANCHAS
         const patternRingMat = new THREE.ShaderMaterial({
             vertexShader: `
                 varying vec2 vUv;
@@ -128,18 +127,18 @@
                     // Calculamos la distancia desde el centro del plano (Saturno)
                     float dist = distance(vUv, vec2(0.5, 0.5));
                     
-                    // --- FÓRMULA DEL PATRÓN DE 3 ANILLOS ---
-                    // Usamos la función seno (sin) para crear ondas de luz concéntricas.
-                    // 'dist * 60.0' controla la frecuencia (cuántas ondas).
-                    float ringPattern = sin(dist * 60.0);
+                    // --- FÓRMULA DEL PATRÓN DE 3 ANILLOS GRUESOS ---
+                    // CORRECCIÓN: Reducimos la frecuencia de 60.0 a 28.0.
+                    // Esto hace que las franjas amarillas sean mucho más ANCHAS.
+                    float ringPattern = sin(dist * 28.0);
                     
-                    // 'smoothstep' define la nitidez de los bordes de los anillos y los huecos.
-                    // Ajustamos los valores para tener 3 franjas claras y 2 huecos.
-                    float bands = smoothstep(0.1, 0.8, ringPattern);
+                    // CORRECCIÓN: Suavizamos la transición para un look de "polvo denso" difuso.
+                    // Cambiamos de 0.1-0.8 a 0.0-0.5.
+                    float bands = smoothstep(0.0, 0.5, ringPattern);
                     
                     // Aseguramos un hueco central para Saturno y un límite externo.
                     // El anillo solo existe entre dist 0.22 y 0.5.
-                    float mask = smoothstep(0.22, 0.3, dist) * (1.0 - smoothstep(0.45, 0.5, dist));
+                    float mask = smoothstep(0.22, 0.3, dist) * (1.0 - smoothstep(0.48, 0.6, dist));
                     
                     // Combinamos las bandas con la máscara y el color
                     float alpha = bands * mask * 0.7; // Opacidad final
