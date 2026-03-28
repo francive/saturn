@@ -76,87 +76,87 @@
         );
         scene.add(glowMesh);
 
-        // 4. ANILLO (ESTRELLAS Y PALABRAS)
-        const starsGroup = new THREE.Group();
-        const wordsGroup = new THREE.Group();
-        scene.add(starsGroup, wordsGroup);
+      // --- NUEVA CONFIGURACIÓN DE ANILLO INCLINADO ---
+const ringGroup = new THREE.Group();
+const starsGroup = new THREE.Group();
+const wordsGroup = new THREE.Group();
 
-        const glowTexture = textureLoader.load('destello.png'); // Sigue usándola para estrellas
-        const starMat = new THREE.SpriteMaterial({ 
-            map: glowTexture, 
-            transparent: true, 
-            blending: THREE.AdditiveBlending,
-            depthWrite: false 
-        });
+// Inclinación tipo Saturno (aprox 25 grados)
+ringGroup.rotation.x = Math.PI * 0.15; 
+ringGroup.rotation.z = Math.PI * 0.05;
+ringGroup.add(starsGroup, wordsGroup);
+scene.add(ringGroup);
 
-        // Crear 700 estrellas brillando - ¡Escala MUCHO más alta!
-        for (let i = 0; i < 700; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 1.6 + Math.random() * 3.5; 
-            const star = new THREE.Sprite(starMat);
-            // Escala aumentada significativamente para visibilidad total
-            const s = Math.random() * 0.2 + 0.07; 
-            star.scale.set(s, s, 1);
-            star.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.3, Math.sin(angle) * radius);
-            starsGroup.add(star);
-        }
+const glowTexture = textureLoader.load('destello.png');
+const starMat = new THREE.SpriteMaterial({ 
+    map: glowTexture, 
+    transparent: true, 
+    blending: THREE.AdditiveBlending,
+    depthWrite: false 
+});
 
-        const baseWords = ["Amor", "Te amo", "Camila", "Juntos", "Siempre", "Eterno", "Bonita", "Mi Vida", "17-05-22", "✨"];
-        for(let i = 0; i < 200; i++) {
-            const text = baseWords[i % baseWords.length];
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 256; canvas.height = 64;
-            ctx.font = 'Bold 45px Arial';
-            ctx.fillStyle = 'white';
-            ctx.textAlign = 'center';
-            ctx.fillText(text, 128, 45);
+// 1. Generar Estrellas (Fondo del anillo) - 800 unidades
+for (let i = 0; i < 800; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 1.7 + Math.random() * 3.2; 
+    const star = new THREE.Sprite(starMat);
+    const s = Math.random() * 0.15 + 0.05; 
+    star.scale.set(s, s, 1);
+    star.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.2, Math.sin(angle) * radius);
+    starsGroup.add(star);
+}
 
-            const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
-                map: new THREE.CanvasTexture(canvas), 
-                transparent: true 
-            }));
-            const angle = (i / 200) * Math.PI * 2;
-            const radius = 1.7 + Math.random() * 2.5;
-            wordSprite.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.25, Math.sin(angle) * radius);
-            wordSprite.scale.set(0.4, 0.12, 1);
-            wordSprite.material.opacity = 0;
-            wordsGroup.add(wordSprite);
-        }
+// 2. Generar Palabras (Sustituyendo estrellas) - 400 unidades
+const baseWords = ["Amor", "Te amo", "Camila", "Juntos", "Siempre", "Eterno", "Bonita", "Mi Vida", "17-05-22", "✨", "Vida", "Mundo"];
+for(let i = 0; i < 400; i++) {
+    const text = baseWords[i % baseWords.length];
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 256; canvas.height = 64;
+    ctx.font = 'Bold 40px Arial';
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, 128, 45);
 
-        camera.position.set(0, 1.5, 7);
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
+    const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
+        map: new THREE.CanvasTexture(canvas), 
+        transparent: true,
+        blending: THREE.AdditiveBlending
+    }));
 
-        // 5. ANIMACIÓN ÚNICA
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
+    // Posición exacta como si fuera una estrella del anillo
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 1.8 + Math.random() * 2.8;
+    wordSprite.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.15, Math.sin(angle) * radius);
+    
+    // Tamaño pequeño para que no se amontonen
+    wordSprite.scale.set(0.18, 0.05, 1); 
+    wordSprite.material.opacity = 0;
+    wordsGroup.add(wordSprite);
+}
 
-            saturn.rotation.y += 0.002;
-            starsGroup.rotation.y += 0.0006;
-            wordsGroup.rotation.y += 0.0006;
+// --- ACTUALIZACIÓN EN EL ANIMATE ---
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
 
-            // --- CRÍTICO: Mover el Skybox con la Cámara ---
-            // Esto crea el efecto de fondo infinito
-            skybox.position.copy(camera.position);
+    saturn.rotation.y += 0.002;
+    // Rotamos el grupo entero inclinado
+    ringGroup.rotation.y += 0.0005; 
 
-            // Lógica de Zoom: Distancia cámara-planeta
-            const dist = camera.position.distanceTo(scene.position);
-            
-            // Transición suave basada en la distancia
-            if (dist < 4.8) {
-                // CERCA: Ver palabras (opacity=1), ocultar estrellas (opacity=0)
-                starsGroup.children.forEach(s => s.material.opacity = 0);
-                wordsGroup.children.forEach(w => w.material.opacity = 1);
-            } else {
-                // LEJOS: Ver estrellas (opacity=1), ocultar palabras (opacity=0)
-                starsGroup.children.forEach(s => s.material.opacity = 1);
-                wordsGroup.children.forEach(w => w.material.opacity = 0);
-            }
+    skybox.position.copy(camera.position);
 
-            renderer.render(scene, camera);
-        }
+    const dist = camera.position.distanceTo(scene.position);
+    if (dist < 4.8) {
+        starsGroup.children.forEach(s => s.material.opacity = 0.2); // Estrellas al mínimo
+        wordsGroup.children.forEach(w => w.material.opacity = 1);   // Palabras al máximo
+    } else {
+        starsGroup.children.forEach(s => s.material.opacity = 1);
+        wordsGroup.children.forEach(w => w.material.opacity = 0);
+    }
+
+    renderer.render(scene, camera);
+}
 
         animate();
 
