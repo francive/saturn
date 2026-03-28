@@ -26,21 +26,22 @@
     );
     scene.add(saturn);
 
-    // 3. BRILLO (GLOW) - ¡Aquí está el truco para quitar el fondo!
+    // 3. BRILLO (GLOW) - Versión Anti-Ajedrez
     const glowTexture = textureLoader.load('destello.png');
     const glowMat = new THREE.SpriteMaterial({ 
         map: glowTexture, 
         color: 0xffeebb, 
         transparent: true, 
-        opacity: 0.8,
-        blending: THREE.AdditiveBlending, // Esto suma colores y elimina el negro
-        depthWrite: false // Evita que el cuadro del brillo tape otras cosas
+        opacity: 1.0, // Subimos opacidad para que el blending trabaje mejor
+        blending: THREE.AdditiveBlending, 
+        depthWrite: false,
+        // ESTA LÍNEA ES NUEVA:
+        alphaTest: 0.5 // Esto le dice: "Si el píxel es gris/oscuro (como el ajedrez), ignóralo"
     });
     const glowSprite = new THREE.Sprite(glowMat);
     glowSprite.scale.set(3.5, 3.5, 1);
     scene.add(glowSprite);
-
-    // 4. ANILLO DE ESTRELLAS Y PALABRAS
+   // 4. ANILLO DE ESTRELLAS Y PALABRAS
     const starsGroup = new THREE.Group();
     const wordsGroup = new THREE.Group();
     scene.add(starsGroup, wordsGroup);
@@ -49,7 +50,44 @@
         map: glowTexture, 
         transparent: true, 
         blending: THREE.AdditiveBlending,
-        depthWrite: false 
+        depthWrite: false,
+        alphaTest: 0.1 // También para las estrellas pequeñas
+    });
+
+    for (let i = 0; i < 600; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 1.6 + Math.random() * 2.2;
+        const star = new THREE.Sprite(starMat);
+        const s = 0.02 + Math.random() * 0.03;
+        star.scale.set(s, s, 1);
+        star.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.2, Math.sin(angle) * radius);
+        starsGroup.add(star);
+    }
+
+    // LISTA MEJORADA - Añadí más frases tuyas
+    const baseWords = ["Amor", "Te amo", "Camila", "Juntos", "Siempre", "17-05-22", "Eterno", "Bonita", "Mi Vida", "Francis Designs", "Universo", "✨"];
+    
+    for(let i = 0; i < 200; i++) { // Subí a 200 para que el anillo esté lleno
+        const text = baseWords[i % baseWords.length];
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 256; canvas.height = 64;
+        ctx.font = 'Bold 45px Arial';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.fillText(text, 128, 45);
+
+        const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
+            map: new THREE.CanvasTexture(canvas), 
+            transparent: true 
+        }));
+        
+        const angle = (i / 200) * Math.PI * 2; // Distribución perfecta
+        const radius = 1.7 + Math.random() * 2.3;
+        wordSprite.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.25, Math.sin(angle) * radius);
+        wordSprite.scale.set(0.4, 0.12, 1);
+        wordSprite.material.opacity = 0;
+        wordsGroup.add(wordSprite);
     });
 
     for (let i = 0; i < 600; i++) {
