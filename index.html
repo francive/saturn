@@ -6,7 +6,6 @@
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
-        
         #audio-container {
             position: absolute;
             top: 20px;
@@ -46,21 +45,13 @@
         const audio = document.getElementById('backgroundAudio');
         const volumeSlider = document.getElementById('volumeRange');
         
-        window.addEventListener('click', () => {
-            audio.play();
-        }, { once: true });
-
-        volumeSlider.addEventListener('input', (e) => {
-            audio.volume = e.target.value;
-        });
+        window.addEventListener('click', () => { audio.play(); }, { once: true });
+        volumeSlider.addEventListener('input', (e) => { audio.volume = e.target.value; });
 
         // 1. FONDO
         const bgTexture = textureLoader.load('estrellas.jpg'); 
         const bgGeometry = new THREE.PlaneGeometry(200, 120);
-        const bgMaterial = new THREE.MeshBasicMaterial({ 
-            map: bgTexture, 
-            transparent: true, depthWrite: false
-        });
+        const bgMaterial = new THREE.MeshBasicMaterial({ map: bgTexture, transparent: true, depthWrite: false });
         const backgroundPlane = new THREE.Mesh(bgGeometry, bgMaterial);
         scene.add(backgroundPlane);
 
@@ -77,6 +68,7 @@
         );
         scene.add(saturn);
 
+        // Brillo Atmosférico
         const atmosGlowMat = new THREE.ShaderMaterial({
             vertexShader: `
                 varying vec3 vNormal;
@@ -92,9 +84,7 @@
                     gl_FragColor = vec4( 1.0, 0.9, 0.7, 1.0 ) * intensity;
                 }
             `,
-            side: THREE.BackSide,
-            blending: THREE.AdditiveBlending,
-            transparent: true
+            side: THREE.BackSide, blending: THREE.AdditiveBlending, transparent: true
         });
         const atmosGlow = new THREE.Mesh(new THREE.SphereGeometry(1.35, 64, 64), atmosGlowMat);
         scene.add(atmosGlow);
@@ -107,50 +97,26 @@
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
-        // --- CORRECCIÓN FINAL: ANILLO INTERIOR ANCHO Y EXTERIOR MUY CERCANO ---
-        const patternRingGeo = new THREE.PlaneGeometry(20, 20);
-        
-        const patternRingMat = new THREE.ShaderMaterial({
-            vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                    vUv = uv;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-                }
-            `,
-            fragmentShader: `
-                varying vec2 vUv;
-                void main() {
-                    float dist = distance(vUv, vec2(0.5, 0.5));
-                    
-                    // Frecuencia ajustada para que el patrón sea denso
-                    float ringPattern = sin(dist * 28.0);
-                    
-                    // Engrosamos el patrón de bandas
-                    float bands = smoothstep(-0.5, 0.5, ringPattern);
-                    
-                    // MÁSCARA AJUSTADA:
-                    // 1. Iniciamos en 0.12 para que toque casi el planeta.
-                    // 2. Terminamos en 0.28 (Antes 0.35) para que el anillo exterior sea pequeño y esté pegado al interior.
-                    float mask = smoothstep(0.12, 0.14, dist) * (1.0 - smoothstep(0.26, 0.28, dist));
-                    
-                    float alpha = bands * mask * 0.85;
-                    vec3 color = vec3(1.0, 0.88, 0.4); 
-                    
-                    gl_FragColor = vec4(color, alpha);
-                }
-            `,
-            transparent: true,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-            side: THREE.DoubleSide
+        // --- NUEVA LÓGICA DE ANILLOS DUPLICADOS (SÓLIDOS) ---
+        const ringMat = new THREE.MeshBasicMaterial({ 
+            color: 0xffe066, 
+            side: THREE.DoubleSide, 
+            transparent: true, 
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending 
         });
 
-        const patternRing = new THREE.Mesh(patternRingGeo, patternRingMat);
-        patternRing.rotation.x = -Math.PI / 2;
-        patternRing.scale.set(1.0, 1.0, 1.0); 
-        patternRing.position.y = -0.05; 
-        ringGroup.add(patternRing);
+        // Anillo Externo
+        const outerRingGeo = new THREE.RingGeometry(4.2, 4.5, 128);
+        const outerRing = new THREE.Mesh(outerRingGeo, ringMat);
+        outerRing.rotation.x = Math.PI / 2;
+        ringGroup.add(outerRing);
+
+        // Anillo Interno (Copia más pequeña y cercana)
+        const innerRingGeo = new THREE.RingGeometry(3.6, 3.9, 128);
+        const innerRing = new THREE.Mesh(innerRingGeo, ringMat);
+        innerRing.rotation.x = Math.PI / 2;
+        ringGroup.add(innerRing);
 
         // Partículas de Polvo
         const destelloTexture = textureLoader.load('destello.png');
@@ -160,7 +126,7 @@
 
         for (let i = 0; i < 4000; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = 1.8 + Math.pow(Math.random(), 0.5) * 3.5; 
+            const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.8; 
             const star = new THREE.Sprite(starMat.clone());
             const s = Math.random() * 0.08 + 0.02; 
             star.scale.set(s, s, 1);
@@ -183,7 +149,7 @@
             }));
 
             const angle = Math.random() * Math.PI * 2;
-            const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.5; 
+            const radius = 2.2 + Math.pow(Math.random(), 0.5) * 3.8; 
             wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
             wordSprite.scale.set(0.1, 0.025, 1); 
             wordSprite.material.opacity = 0;
@@ -238,10 +204,12 @@
             const dist = camera.position.distanceTo(scene.position);
             if (dist < 7.5) {
                 wordsGroup.children.forEach(w => w.material.opacity = 1);
-                patternRing.material.opacity = 0.5;
+                outerRing.material.opacity = 0.4;
+                innerRing.material.opacity = 0.4;
             } else {
                 wordsGroup.children.forEach(w => w.material.opacity = 0);
-                patternRing.material.opacity = 1;
+                outerRing.material.opacity = 0.8;
+                innerRing.material.opacity = 0.8;
             }
 
             renderer.render(scene, camera);
