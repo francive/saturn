@@ -13,165 +13,131 @@
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
 
-        // Escena, Cámara y Render
+        // 1. ESCENA, CÁMARA Y RENDER
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Luz
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+        // 2. LUCES
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
         scene.add(ambientLight);
-        const sunLight = new THREE.PointLight(0xffffff, 1);
-        sunLight.position.set(10, 5, 10);
-        scene.add(sunLight);
 
-        // Saturno (Esfera)
-        const saturnGeom = new THREE.SphereGeometry(1, 64, 64);
+        // 3. CARGADOR DE TEXTURAS
         const textureLoader = new THREE.TextureLoader();
-        // Usamos una textura genérica de internet para que funcione de una vez
+
+        // 4. FONDO DE ESTRELLAS (SKYSHELL)
+        const skyGeom = new THREE.SphereGeometry(100, 32, 32);
+        const skyTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/galaxy_starfield.png');
+        const skyMat = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
+        const skySphere = new THREE.Mesh(skyGeom, skyMat);
+        scene.add(skySphere);
+
+        // 5. SATURNO (EL PLANETA)
+        const saturnGeom = new THREE.SphereGeometry(1, 64, 64);
         const saturnMap = textureLoader.load('saturno.jpg');
         const saturnMat = new THREE.MeshBasicMaterial({ map: saturnMap });
         const saturn = new THREE.Mesh(saturnGeom, saturnMat);
         scene.add(saturn);
-        
-        // --- Capa 1: EFECTO GLOW (Brillo Atmosférico) ---
-// Usaremos una imagen de un destello (Sprite) para simular la atmósfera
-const glowTexture = textureLoader.load('https://threejs.org/examples/textures/sprites/lensflare/lensflare0.png');
-// Material transparente con un tono ocre para que parezca de Saturno
-const glowMat = new THREE.SpriteMaterial({ 
-    map: glowTexture, 
-    color: 0xffcc99, // Un tono beige/ocre
-    transparent: true, 
-    blending: THREE.AdditiveBlending // Esto hace que el brillo se sume a la luz de fondo
-});
-const glowSprite = new THREE.Sprite(glowMat);
-// El Sprite debe ser un poco más grande que el planeta
-glowSprite.scale.set(3, 3, 1); // Prueba con estos valores
-scene.add(glowSprite);
 
-        // --- Capa 2: FONDO DE ESTRELLAS REALES ---
-const scene = new THREE.Scene();
+        // 6. EFECTO GLOW (EL BRILLO ALREDEDOR)
+        const glowTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/sprites/lensflare/lensflare0.png');
+        const glowMat = new THREE.SpriteMaterial({ 
+            map: glowTexture, 
+            color: 0xffcc99, 
+            transparent: true, 
+            blending: THREE.AdditiveBlending 
+        });
+        const glowSprite = new THREE.Sprite(glowMat);
+        glowSprite.scale.set(3, 3, 1);
+        scene.add(glowSprite);
 
-// Creamos una esfera gigante que envolverá todo
-const skyGeom = new THREE.SphereGeometry(100, 32, 32);
-// Cargamos una textura de estrellas (puedes buscar "milky way skysphere texture" en Google)
-const skyTexture = textureLoader.load('https://threejs.org/examples/textures/planets/galaxy_starfield.png');
-const skyMat = new THREE.MeshBasicMaterial({ 
-    map: skyTexture, 
-    side: THREE.BackSide // Importante: la textura se ve por DENTRO de la esfera
-});
-const skySphere = new THREE.Mesh(skyGeom, skyMat);
-scene.add(skySphere);
-
-       // --- Capa 3: ANILLO DE ESTRELLAS/DESTELLOS MEJORADO ---
-const particleGroup = new THREE.Group();
-const particleWordsGroup = new THREE.Group(); // Grupo para las palabras
-
-// Usamos la misma textura de glow para que las estrellas brillen
-const starTexture = textureLoader.load('https://threejs.org/examples/textures/sprites/lensflare/lensflare0.png');
-
-// Aumentamos a 1000 estrellas para que se vea más denso
-for (let i = 0; i < 1000; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    // Anillo más ancho y difuso
-    const radius = 1.6 + Math.random() * 2.5; 
-    const x = Math.cos(angle) * radius;
-    const z = Math.sin(angle) * radius;
-    // Más dispersión en el eje Y
-    const y = (Math.random() - 0.5) * 0.3;
-
-    const starMat = new THREE.SpriteMaterial({ 
-        map: starTexture, 
-        color: 0xffffff,
-        transparent: true,
-        blending: THREE.AdditiveBlending // Esto les da ese aspecto de brillo
-    });
-    const star = new THREE.Sprite(starMat);
-    // Hacemos que algunas sean más pequeñas y otras más grandes
-    const starScale = Math.random() * 0.03 + 0.01;
-    star.scale.set(starScale, starScale, 1);
-    star.position.set(x, y, z);
-    particleGroup.add(star);
-}
-scene.add(particleGroup);
-scene.add(particleWordsGroup); // Grupo para añadir palabras luego
+        // 7. ANILLO DE ESTRELLAS Y PALABRAS
+        const particleGroup = new THREE.Group();
+        const particleWordsGroup = new THREE.Group();
         scene.add(particleGroup);
+        scene.add(particleWordsGroup);
 
-        camera.position.z = 4;
+        // Crear 800 estrellas brillantes
+        for (let i = 0; i < 800; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 1.6 + Math.random() * 2.5; 
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const y = (Math.random() - 0.5) * 0.3;
+
+            const starMat = new THREE.SpriteMaterial({ 
+                map: glowTexture, 
+                transparent: true, 
+                blending: THREE.AdditiveBlending 
+            });
+            const star = new THREE.Sprite(starMat);
+            const s = Math.random() * 0.03 + 0.01;
+            star.scale.set(s, s, 1);
+            star.position.set(x, y, z);
+            particleGroup.add(star);
+        }
+
+        // Crear las palabras de amor
+        const words = ["Amor", "Te amo", "Juntos", "Siempre", "Eterno", "Bonita", "Mi Vida", "17-05-22"];
+        words.forEach((text) => {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 1.8;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 256; canvas.height = 64;
+            ctx.font = 'Bold 40px Arial';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, 128, 45);
+
+            const txtTexture = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({ map: txtTexture, transparent: true });
+            const wordSprite = new THREE.Sprite(spriteMat);
+            wordSprite.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.2, Math.sin(angle) * radius);
+            wordSprite.scale.set(0.6, 0.2, 1);
+            wordSprite.material.opacity = 0; // Ocultas al inicio
+            particleWordsGroup.add(wordSprite);
+        });
+
+        camera.position.z = 5;
         const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
 
-        // Animación
+        // 8. ANIMACIÓN ÚNICA
         function animate() {
             requestAnimationFrame(animate);
-            saturn.rotation.y += 0.005;
-            particleGroup.rotation.y += 0.002;
+            controls.update();
+
+            saturn.rotation.y += 0.003;
+            particleGroup.rotation.y += 0.001;
+            particleWordsGroup.rotation.y += 0.001;
+
+            // Lógica de Zoom: Distancia cámara-planeta
+            const dist = camera.position.distanceTo(scene.position);
+            
+            if (dist < 3.8) {
+                // CERCA: Ver palabras, ocultar estrellas
+                particleGroup.children.forEach(s => s.material.opacity = 0);
+                particleWordsGroup.children.forEach(w => w.material.opacity = 1);
+            } else {
+                // LEJOS: Ver estrellas, ocultar palabras
+                particleGroup.children.forEach(s => s.material.opacity = 1);
+                particleWordsGroup.children.forEach(w => w.material.opacity = 0);
+            }
+
             renderer.render(scene, camera);
         }
-        // --- Capa EXTRA: PALABRAS DE AMOR ---
-// Aquí pones todas tus palabras
-const words = ["Amor", "Te amo", "Juntos", "Siempre", "Eterno", "Bonita", "Mi Vida", "Universo"];
 
-for (let i = 0; i < words.length; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    // Ponemos las palabras más cerca del planeta
-    const radius = 1.6; 
-    const x = Math.cos(angle) * radius;
-    const z = Math.sin(angle) * radius;
-    const y = (Math.random() - 0.5) * 0.1;
-
-    // Crear un pequeño canvas para dibujar el texto
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 256;
-    canvas.height = 64;
-    ctx.font = 'Bold 40px Arial';
-    ctx.fillStyle = 'white';
-    ctx.textAlign = 'center';
-    ctx.fillText(words[i], 128, 45);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
-    const sprite = new THREE.Sprite(spriteMat);
-    
-    // Las palabras empiezan siendo GRANDES pero invisibles (o casi)
-    sprite.scale.set(0.6, 0.2, 1); 
-    sprite.position.set(x, y, z);
-    sprite.opacity = 0; // Empiezan siendo invisibles
-    particleWordsGroup.add(sprite);
-}
-
-// --- ACTUALIZACIÓN DE LA ANIMACIÓN PARA EL EFECTO DE ZOOM ---
-// Reemplaza tu función animate por esta para el efecto de zoom
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-function animate() {
-    requestAnimationFrame(animate);
-    
-    saturn.rotation.y += 0.005;
-    particleGroup.rotation.y += 0.002;
-    particleWordsGroup.rotation.y += 0.002;
-    
-    // --- Lógica del Zoom para revelar palabras ---
-    // Calculamos la distancia de la cámara al centro
-    const distance = camera.position.distanceTo(scene.position);
-    
-    // Si estamos lejos (distancia > 3.5), mostramos las estrellas y ocultamos palabras
-    if (distance > 3.5) {
-        particleGroup.children.forEach(star => star.material.opacity = 1);
-        particleWordsGroup.children.forEach(word => word.material.opacity = 0);
-    } 
-    // Si estamos cerca (distancia <= 3.5), mostramos palabras y ocultamos estrellas
-    else {
-        particleGroup.children.forEach(star => star.material.opacity = 0);
-        particleWordsGroup.children.forEach(word => word.material.opacity = 1);
-    }
-
-    renderer.render(scene, camera);
-}
         animate();
+
+        // Ajuste de ventana
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
