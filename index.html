@@ -100,18 +100,19 @@
         const atmosGlow = new THREE.Mesh(new THREE.SphereGeometry(1.35, 64, 64), atmosGlowMat);
         scene.add(atmosGlow);
 
-        // 3. GRUPOS DE ANILLOS Y PALABRAS
-        const ringGroup = new THREE.Group();
-        const wordsGroup = new THREE.Group();
-        ringGroup.rotation.x = Math.PI * 0.15;
-        scene.add(ringGroup);
-        ringGroup.add(wordsGroup);
+        // 3. GRUPO UNIFICADO DEL ANILLO (Crucial para el ángulo)
+        // Creamos UN SOLO grupo que contendrá todo y lo inclinaremos una sola vez.
+        const unifiedRingGroup = new THREE.Group();
+        unifiedRingGroup.rotation.x = Math.PI * 0.18; // Inclinación cinematográfica unificada
+        scene.add(unifiedRingGroup);
 
-        // --- NUEVO: ANILLO SÓLIDO BRILLANTE DOBLE CARA (GLOWING DISK) ---
-        // Geometría sólida de disco con hueco central (como image_11.png)
+        const starsGroup = new THREE.Group();
+        const wordsGroup = new THREE.Group();
+        // Las partículas y palabras heredan la rotación de unifiedRingGroup.
+        unifiedRingGroup.add(starsGroup, wordsGroup);
+
+        // --- CORRECCIÓN: ANILLO SÓLIDO BRILLANTE UNIFICADO EN ÁNGULO ---
         const solidRingGeo = new THREE.RingGeometry(2.2, 4.0, 128);
-        
-        // Shader para crear el efecto de brillo denso
         const solidRingMat = new THREE.ShaderMaterial({
             vertexShader: `
                 varying vec2 vUv;
@@ -123,31 +124,25 @@
             fragmentShader: `
                 varying vec2 vUv;
                 void main() {
-                    // Genera un desvanecimiento suave hacia el centro del anillo
                     float intensity = smoothstep(0.0, 1.0, vUv.y);
-                    // Color amarillo incandescente (como image_11.png)
                     gl_FragColor = vec4(1.0, 0.85, 0.3, 1.0) * intensity;
                 }
             `,
-            transparent: true,
-            depthWrite: false,
-            side: THREE.DoubleSide, // DOBLE CARA (Visible desde arriba y abajo)
-            blending: THREE.AdditiveBlending // Crucial para que el brillo se sume
+            transparent: true, depthWrite: false,
+            side: THREE.DoubleSide, blending: THREE.AdditiveBlending 
         });
 
         const solidRing = new THREE.Mesh(solidRingGeo, solidRingMat);
-        // Posicionado ligeramente ABAJO para que las letras floten arriba
+        // Lo añadimos al grupo unificado, por lo que hereda el ángulo de unifiedRingGroup.
+        // Solo necesitamos ajustarlo ligeramente abajo en Y (-0.1) para que floten las letras.
         solidRing.position.y = -0.1;
-        ringGroup.add(solidRing);
+        unifiedRingGroup.add(solidRing);
 
         // --- CORRECCIÓN FINAL PARTICULAS: Polvo etéreo que da textura ---
         const destelloTexture = textureLoader.load('destello.png');
         const starMat = new THREE.SpriteMaterial({ 
             map: destelloTexture, 
-            transparent: true, 
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            opacity: 0.8
+            transparent: true,Blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8
         });
 
         // Usamos menos partículas pero más dispersas para dar textura sobre el disco sólido (como image_10.png)
@@ -157,8 +152,9 @@
             const star = new THREE.Sprite(starMat.clone());
             const s = Math.random() * 0.08 + 0.02; 
             star.scale.set(s, s, 1);
+            // Las partículas se posicionan en el plano del unifiedRingGroup (heredan rotación X)
             star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.15, Math.sin(angle) * radius);
-            ringGroup.add(star);
+            starsGroup.add(star);
         }
 
         // 4. PALABRAS (Ahora flotando SOBRE el disco sólido)
@@ -209,7 +205,7 @@
             controls.update();
 
             saturn.rotation.y += 0.001;
-            ringGroup.rotation.y += 0.0003;
+            unifiedRingGroup.rotation.y += 0.0003; // Rotación unificada
 
             // Fondo con seguimiento
             const vector = new THREE.Vector3(0, 0, -50); 
@@ -232,7 +228,7 @@
 
             const dist = camera.position.distanceTo(scene.position);
             if (dist < 7.5) {
-                // Baja brillo polvo para resaltar palabras
+                // Al hacer zoom, baja brillo del anillo de polvo para resaltar palabras
                 wordsGroup.children.forEach(w => w.material.opacity = 1);
                 solidRing.material.opacity = 0.5;
             } else {
