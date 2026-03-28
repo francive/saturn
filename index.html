@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Un Universo Inmersivo para Ti</title>
+    <title>Un Universo Inmersivo para Ti - Francis Designs</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
@@ -71,7 +71,7 @@
         renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // 2. SATURNO Y ATMÓSFERA
+        // 2. SATURNO CON RESPLANDOR ATMOSFÉRICO
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
             new THREE.MeshBasicMaterial({ map: textureLoader.load('saturno.jpg') })
@@ -107,55 +107,62 @@
         scene.add(ringGroup);
         ringGroup.add(wordsGroup);
 
-        const destelloTexture = textureLoader.load('destello.png');
-
-        // --- CORRECCIÓN: ANILLO DEFINIDO DE POLVO BRILLANTE ---
-        // Generamos partículas que se concentran en un anillo geométrico con hueco central (como image_11.png)
-        const particleCount = 15000; // Alta densidad (como image_10.png)
-        const positions = new Float32Array(particleCount * 3);
-        const colors = new Float32Array(particleCount * 3);
+        // --- NUEVO: ANILLO SÓLIDO BRILLANTE DOBLE CARA (GLOWING DISK) ---
+        // Geometría sólida de disco con hueco central (como image_11.png)
+        const solidRingGeo = new THREE.RingGeometry(2.2, 4.0, 128);
         
-        const amarillo = new THREE.Color(0xFFD700);
-        const blanco = new THREE.Color(0xFFFFFF);
-
-        for (let i = 0; i < particleCount; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            // Definimos el ancho del anillo (hueco de 2.0 a 4.0)
-            const radius = 2.0 + Math.pow(Math.random(), 0.7) * 4.0; 
-            positions[i * 3] = Math.cos(angle) * radius;
-            positions[i * 3 + 1] = (Math.random() - 0.5) * 0.15; // Variación en Y para volumen
-            positions[i * 3 + 2] = Math.sin(angle) * radius;
-
-            // Degradado de color del centro amarillo hacia afuera blanco (como image_11.png)
-            const colorRatio = (radius - 2.0) / 4.0;
-            const finalColor = amarillo.clone().lerp(blanco, colorRatio);
-            colors[i * 3] = finalColor.r;
-            colors[i * 3 + 1] = finalColor.g;
-            colors[i * 3 + 2] = finalColor.b;
-        }
-
-        const pointGeometry = new THREE.BufferGeometry();
-        pointGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        pointGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-        // Material de puntos que crea el efecto de "polvo brillante" denso
-        const pointMaterial = new THREE.PointsMaterial({
-            size: 0.1,
-            map: destelloTexture,
+        // Shader para crear el efecto de brillo denso
+        const solidRingMat = new THREE.ShaderMaterial({
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                }
+            `,
+            fragmentShader: `
+                varying vec2 vUv;
+                void main() {
+                    // Genera un desvanecimiento suave hacia el centro del anillo
+                    float intensity = smoothstep(0.0, 1.0, vUv.y);
+                    // Color amarillo incandescente (como image_11.png)
+                    gl_FragColor = vec4(1.0, 0.85, 0.3, 1.0) * intensity;
+                }
+            `,
             transparent: true,
-            blending: THREE.AdditiveBlending, // Brillo aditivo (como image_11.png)
-            depthWrite: false, // Evita que se corten entre sí
-            vertexColors: true, // Usa los colores calculados
-            sizeAttenuation: true // Se hacen más pequeños de lejos
+            depthWrite: false,
+            side: THREE.DoubleSide, // DOBLE CARA (Visible desde arriba y abajo)
+            blending: THREE.AdditiveBlending // Crucial para que el brillo se sume
         });
 
-        const volumetricRing = new THREE.Points(pointGeometry, pointMaterial);
+        const solidRing = new THREE.Mesh(solidRingGeo, solidRingMat);
         // Posicionado ligeramente ABAJO para que las letras floten arriba
-        volumetricRing.position.y = -0.1;
-        ringGroup.add(volumetricRing);
+        solidRing.position.y = -0.1;
+        ringGroup.add(solidRing);
 
-        // 4. PALABRAS
-        const loveWords = ["Te amo", "Flores amarillas", "Mi flor favorita", "Un detalle amarillo", "✨ Eres muy especial ✨", "Siempre brillas", "Flores para ti", "Nuestro Amor", "Infinito", "Destino", "Te adoro", "Gracia", "Cielo"];
+        // --- CORRECCIÓN FINAL PARTICULAS: Polvo etéreo que da textura ---
+        const destelloTexture = textureLoader.load('destello.png');
+        const starMat = new THREE.SpriteMaterial({ 
+            map: destelloTexture, 
+            transparent: true, 
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            opacity: 0.8
+        });
+
+        // Usamos menos partículas pero más dispersas para dar textura sobre el disco sólido (como image_10.png)
+        for (let i = 0; i < 4000; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.8; 
+            const star = new THREE.Sprite(starMat.clone());
+            const s = Math.random() * 0.08 + 0.02; 
+            star.scale.set(s, s, 1);
+            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.15, Math.sin(angle) * radius);
+            ringGroup.add(star);
+        }
+
+        // 4. PALABRAS (Ahora flotando SOBRE el disco sólido)
+        const loveWords = ["Te amo", "✨ Eres muy especial ✨", "Flores amarillas", "Nuestro Amor", "Te adoro", "Siempre brillas", "Flores para ti", "Infinito", "Destino", "Te adoro", "Gracia", "Cielo"];
         
         for(let i = 0; i < 400; i++) {
             const randomText = loveWords[i % loveWords.length];
@@ -170,7 +177,7 @@
 
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.2 + Math.pow(Math.random(), 0.5) * 3.8; 
-            // Posicionadas para que floten SOBRE el anillo de polvo
+            // Posicionadas para que floten SOBRE el disco sólido de polvo
             wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
             wordSprite.scale.set(0.1, 0.025, 1); 
             wordSprite.material.opacity = 0;
@@ -225,12 +232,12 @@
 
             const dist = camera.position.distanceTo(scene.position);
             if (dist < 7.5) {
-                // Al hacer zoom, baja brillo del anillo de polvo para resaltar palabras
-                volumetricRing.material.opacity = 0.5;
+                // Baja brillo polvo para resaltar palabras
                 wordsGroup.children.forEach(w => w.material.opacity = 1);
+                solidRing.material.opacity = 0.5;
             } else {
-                volumetricRing.material.opacity = 1;
                 wordsGroup.children.forEach(w => w.material.opacity = 0);
+                solidRing.material.opacity = 1;
             }
 
             renderer.render(scene, camera);
