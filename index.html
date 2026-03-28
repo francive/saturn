@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Un Universo Inmersivo para Ti - Francis Designs</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; }
+        #audio-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            color: white;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="audio-container">
+        <label for="volumeRange">Volumen</label>
+        <input type="range" id="volumeRange" min="0" max="1" step="0.1" value="0.5">
+    </div>
+
+    <audio id="backgroundAudio" loop>
+        <source src="saturnaudio.MP3" type="audio/mpeg">
+    </audio>
+
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.136.0/build/three.module.js';
+        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
+
+        const scene = new THREE.Scene();
+        const textureLoader = new THREE.TextureLoader();
+
+        const audio = document.getElementById('backgroundAudio');
+        const volumeSlider = document.getElementById('volumeRange');
+        window.addEventListener('click', () => { audio.play(); }, { once: true });
+        volumeSlider.addEventListener('input', (e) => { audio.volume = e.target.value; });
+
+        // 1. FONDO
+        const bgTexture = textureLoader.load('estrellas.jpg'); 
+        const bgMaterial = new THREE.MeshBasicMaterial({ map: bgTexture, transparent: true, depthWrite: false });
+        const backgroundPlane = new THREE.Mesh(new THREE.PlaneGeometry(400, 240), bgMaterial);
+        scene.add(backgroundPlane);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2500);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limita el ratio para mejorar rendimiento
+        document.body.appendChild(renderer.domElement);
+
+        // 2. SATURNO
+        const saturn = new THREE.Mesh(
+            new THREE.SphereGeometry(1.2, 64, 64),
+            new THREE.MeshBasicMaterial({ map: textureLoader.load('saturno.jpg') })
+        );
+        scene.add(saturn);
+
+        // 3. GRUPOS
+        const atmosphereStars = new THREE.Group(); 
+        const ringGroup = new THREE.Group();       
+        const ringStars = new THREE.Group();       
+        const wordsGroup = new THREE.Group();      
+        
+        ringGroup.rotation.x = Math.PI * 0.15;
+        scene.add(atmosphereStars, ringGroup);
+        ringGroup.add(ringStars, wordsGroup);
+
+        const destelloTexture = textureLoader.load('destello.png');
+
+        // --- CAPA 1: 1,500 ESTRELLAS GRANDES EN EL DOMO ---
+        for (let i = 0; i < 1500; i++) {
+            const starMat = new THREE.SpriteMaterial({ 
+                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: Math.random() * 0.6 + 0.2
+            });
+            const star = new THREE.Sprite(starMat);
+            const r = 8 + Math.random() * 4; 
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos((Math.random() * 2) - 1);
+            star.position.set(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
+            
+            // Tamaño aumentado considerablemente
+            const s = Math.random() * 0.4 + 0.15; 
+            star.scale.set(s, s, 1);
+            atmosphereStars.add(star);
+        }
+
+        // --- CAPA 2: 1,000 ESTRELLAS GRANDES EN LOS ANILLOS ---
+        for (let i = 0; i < 1000; i++) {
+            const starMat = new THREE.SpriteMaterial({ 
+                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 
+            });
+            const star = new THREE.Sprite(starMat);
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 1.8 + Math.random() * 3.5; 
+            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
+            
+            // Tamaño aumentado para compensar la menor cantidad
+            const s = Math.random() * 0.25 + 0.1;
+            star.scale.set(s, s, 1);
+            ringStars.add(star);
+        }
+
+        // --- ANILLOS VISUALES ---
+        const ringMat = new THREE.MeshBasicMaterial({ 
+            color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false
+        });
+        const rings = [new THREE.RingGeometry(1.8, 3.2, 64), new THREE.RingGeometry(3.5, 4.8, 64)];
+        rings.forEach(geo => {
+            const mesh = new THREE.Mesh(geo, ringMat);
+            mesh.rotation.x = Math.PI / 2;
+            ringGroup.add(mesh);
+        });
+
+        // --- CAPA 3: PALABRAS (ACTIVACIÓN MUY CERCANA) ---
+        const loveWords = ["Te amo", "✨ Eres muy especial ✨", "Flores amarillas", "Nuestro Amor", "Te adoro", "Siempre brillas", "Flores para ti", "Infinito", "Destino", "Gracia", "Cielo"];
+        for(let i = 0; i < 100; i++) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 256; canvas.height = 64;
+            ctx.font = '32px Georgia'; ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.fillText(loveWords[i % loveWords.length], 128, 40);
+
+            const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
+                map: new THREE.CanvasTexture(canvas), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0
+            }));
+
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 2.0 + Math.random() * 3.0; 
+            wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
+            wordSprite.scale.set(0.5, 0.12, 1); 
+            wordsGroup.add(wordSprite);
+        }
+
+        camera.position.set(0, 5, 15);
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            saturn.rotation.y += 0.001;
+            ringGroup.rotation.y += 0.0005; 
+            atmosphereStars.rotation.y += 0.0001; 
+
+            // Titileo optimizado (menos frecuencia)
+            atmosphereStars.children.forEach((s, i) => {
+                if (i % 30 === 0) s.material.opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.001 + i) * 0.4);
+            });
+
+            const vector = new THREE.Vector3(0, 0, -100); 
+            vector.applyQuaternion(camera.quaternion);
+            backgroundPlane.position.copy(camera.position).add(vector);
+            backgroundPlane.quaternion.copy(camera.quaternion);
+
+            const dist = camera.position.distanceTo(scene.position);
+            // Solo aparecen cuando estás realmente cerca
+            wordsGroup.children.forEach(w => w.material.opacity = dist < 7.5 ? 1 : 0);
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
