@@ -6,21 +6,12 @@
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
-        
         #audio-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 8px;
-            backdrop-filter: blur(5px);
-            color: white;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255, 255, 255, 0.1); padding: 10px;
+            border-radius: 8px; backdrop-filter: blur(5px);
+            color: white; z-index: 100; display: flex;
+            align-items: center; gap: 10px; border: 1px solid rgba(255, 255, 255, 0.2);
         }
         input[type=range] { cursor: pointer; }
     </style>
@@ -43,27 +34,18 @@
         const scene = new THREE.Scene();
         const textureLoader = new THREE.TextureLoader();
 
-        // MANEJO DE AUDIO
         const audio = document.getElementById('backgroundAudio');
         const volumeSlider = document.getElementById('volumeRange');
-        
-        window.addEventListener('click', () => {
-            audio.play();
-        }, { once: true });
-
-        volumeSlider.addEventListener('input', (e) => {
-            audio.volume = e.target.value;
-        });
+        window.addEventListener('click', () => { audio.play(); }, { once: true });
+        volumeSlider.addEventListener('input', (e) => { audio.volume = e.target.value; });
 
         // 1. FONDO
         const bgTexture = textureLoader.load('estrellas.jpg'); 
-        const bgGeometry = new THREE.PlaneGeometry(200, 120);
-        const bgMaterial = new THREE.MeshBasicMaterial({ 
-            map: bgTexture, 
-            transparent: true, depthWrite: false
-        });
-        const backgroundPlane = new THREE.Mesh(bgGeometry, bgMaterial);
-        scene.add(backgroundPlane);
+        const bgPlane = new THREE.Mesh(
+            new THREE.PlaneGeometry(200, 120),
+            new THREE.MeshBasicMaterial({ map: bgTexture, transparent: true, depthWrite: false })
+        );
+        scene.add(bgPlane);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2500);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -71,102 +53,52 @@
         renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // 2. SATURNO CON RESPLANDOR ATMOSFÉRICO
+        // 2. SATURNO Y ATMÓSFERA
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
             new THREE.MeshBasicMaterial({ map: textureLoader.load('saturno.jpg') })
         );
         scene.add(saturn);
 
-        const atmosGlowGeo = new THREE.SphereGeometry(1.35, 64, 64);
         const atmosGlowMat = new THREE.ShaderMaterial({
-            vertexShader: `
-                varying vec3 vNormal;
-                void main() {
-                    vNormal = normalize( normalMatrix * normal );
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-                }
-            `,
-            fragmentShader: `
-                varying vec3 vNormal;
-                void main() {
-                    float intensity = pow( 0.6 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ), 4.0 );
-                    gl_FragColor = vec4( 1.0, 0.9, 0.7, 1.0 ) * intensity;
-                }
-            `,
-            side: THREE.BackSide,
-            blending: THREE.AdditiveBlending,
-            transparent: true
+            vertexShader: `varying vec3 vNormal; void main() { vNormal = normalize( normalMatrix * normal ); gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
+            fragmentShader: `varying vec3 vNormal; void main() { float intensity = pow( 0.6 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ), 4.0 ); gl_FragColor = vec4( 1.0, 0.9, 0.7, 1.0 ) * intensity; }`,
+            side: THREE.BackSide, blending: THREE.AdditiveBlending, transparent: true
         });
-        const atmosGlow = new THREE.Mesh(atmosGlowGeo, atmosGlowMat);
+        const atmosGlow = new THREE.Mesh(new THREE.SphereGeometry(1.35, 64, 64), atmosGlowMat);
         scene.add(atmosGlow);
 
-        // 3. GRUPOS DE ANILLOS Y PALABRAS
+        // 3. GRUPOS
         const ringGroup = new THREE.Group();
         const starsGroup = new THREE.Group();
         const wordsGroup = new THREE.Group();
-        ringGroup.rotation.x = Math.PI * 0.15;
+        ringGroup.rotation.x = Math.PI * 0.15; // Inclinación de 25-30 grados aprox
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
-       // --- CORRECCIÓN: ANILLO CON AGUJERO (Mantiene el brillo pero no atraviesa el planeta) ---
-// Usamos RingGeometry(radioInterno, radioExterno, segmentos)
-// El radio interno de 1.4 es suficiente para que el planeta (1.2) pase por el medio.
-const glowRingGeo = new THREE.RingGeometry(1.4, 5, 64); 
-
-// El material se queda EXACTAMENTE igual para no perder tu efecto de color
-const glowRingMat = new THREE.ShaderMaterial({
-    uniforms: {
-        color: { value: new THREE.Color(0xFFD700) }
-    },
-    vertexShader: `
-        varying vec2 vUv;
-        void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-        }
-    `,
-    fragmentShader: `
-        uniform vec3 color;
-        varying vec2 vUv;
-        void main() {
-            // Nota: En RingGeometry, las UVs se distribuyen de forma distinta, 
-            // pero el efecto de distancia seguirá funcionando para el brillo.
-            float dist = distance(vUv, vec2(0.5, 0.5));
-            float alpha = smoothstep(0.5, 0.2, dist) * 0.6;
-            vec3 finalColor = mix(vec3(1.0, 0.8, 0.3), color, smoothstep(0.3, 0.5, dist));
-            gl_FragColor = vec4(finalColor, alpha);
-        }
-    `,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
-});
-
-const glowRing = new THREE.Mesh(glowRingGeo, glowRingMat);
-// Ya no necesitamos rotarlo en X -90 porque RingGeometry se crea "de frente" 
-// y el ringGroup ya tiene la inclinación de 15 grados que te gusta.
-// Si ves que queda "parado", deja esta línea:
-glowRing.rotation.x = 0; // O bórrala, ya que el grupo manda.
-glowRing.position.y = -0.05; 
-ringGroup.add(glowRing);
-
-        const glowRing = new THREE.Mesh(glowRingGeo, glowRingMat);
-        glowRing.rotation.x = -Math.PI / 2; // Acostado
-        glowRing.scale.set(1.5, 1.5, 1); // Lo escalamos para que sea ancho
-        glowRing.position.y = -0.05; // Base brillante debajo de las letras
-        ringGroup.add(glowRing);
-
-        // Partículas (más dispersas para dar textura)
-        const destelloTexture = textureLoader.load('destello.png');
-        const starMat = new THREE.SpriteMaterial({ 
-            map: destelloTexture, 
-            transparent: true, 
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            opacity: 0.8
+        // --- CAMBIO CLAVE: RingGeometry para que no atraviese el planeta ---
+        const glowRingGeo = new THREE.RingGeometry(1.4, 5.5, 64); 
+        const glowRingMat = new THREE.ShaderMaterial({
+            uniforms: { color: { value: new THREE.Color(0xFFD700) } },
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
+            fragmentShader: `uniform vec3 color; varying vec2 vUv; void main() { 
+                float dist = distance(vUv, vec2(0.5, 0.5)); 
+                float alpha = smoothstep(0.5, 0.2, dist) * 0.7; 
+                vec3 finalColor = mix(vec3(1.0, 0.8, 0.3), color, smoothstep(0.3, 0.5, dist)); 
+                gl_FragColor = vec4(finalColor, alpha); 
+            }`,
+            transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
         });
 
+        const glowRing = new THREE.Mesh(glowRingGeo, glowRingMat);
+        glowRing.rotation.x = Math.PI / 2; // Lo acostamos para que el grupo lo incline
+        glowRing.position.y = -0.05; 
+        ringGroup.add(glowRing);
+
+        // PARTÍCULAS
+        const starMat = new THREE.SpriteMaterial({ 
+            map: textureLoader.load('destello.png'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false 
+        });
         for (let i = 0; i < 4000; i++) {
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.8; 
@@ -177,45 +109,32 @@ ringGroup.add(glowRing);
             starsGroup.add(star);
         }
 
-        // 4. PALABRAS
-        const loveWords = ["Infinito", "Destino", "Magia", "Luz", "Cielo", "Vida", "Tesoro", "Esencia", "Eternidad", "Suspiro", "Latido", "Universo", "Alma", "Poesía", "Sueño", "Dulzura", "Pasión", "Ternura", "Compromiso", "Refugio", "Paz", "Felicidad", "Amanecer", "Estrella", "Milagro", "Gracia", "Encanto", "Adoración", "Lealtad", "Sinceridad", "Abrazo", "Beso", "Calma", "Fuego", "Unión", "Raíz", "Brillo", "Anhelo", "Valentía", "Cuidado", "Respeto", "Incondicional", "Mundo"];
-
+        // PALABRAS
+        const loveWords = ["Infinito", "Destino", "Magia", "Luz", "Cielo", "Vida", "Tesoro", "Eternidad", "Suspiro", "Latido", "Universo", "Alma", "Poesía", "Sueño", "Dulzura", "Pasión", "Ternura", "Compromiso", "Refugio", "Paz", "Felicidad", "Amanecer", "Estrella", "Milagro", "Gracia", "Encanto", "Adoración", "Lealtad", "Sinceridad", "Abrazo", "Beso", "Calma", "Fuego", "Unión", "Raíz", "Brillo", "Anhelo", "Valentía", "Cuidado", "Respeto", "Incondicional", "Mundo"];
         for(let i = 0; i < 400; i++) {
-            const randomText = loveWords[Math.floor(Math.random() * loveWords.length)];
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = 256; canvas.height = 64;
             ctx.shadowColor = "white"; ctx.shadowBlur = 8;
-            ctx.font = 'Bold 38px Georgia'; ctx.fillStyle = '#FFFFFF';
-            ctx.textAlign = 'center'; ctx.fillText(randomText, 128, 45);
-
-            const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
-                map: new THREE.CanvasTexture(canvas), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
-            }));
-
+            ctx.font = 'Bold 38px Georgia'; ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center';
+            ctx.fillText(loveWords[i % loveWords.length], 128, 45);
+            const word = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.6 + Math.random() * 3.0;
-            // Elevamos las palabras para que el disco brillante pase por debajo
-            wordSprite.position.set(Math.cos(angle) * radius, 0.1, Math.sin(angle) * radius);
-            wordSprite.scale.set(0.2, 0.06, 1); 
-            wordSprite.material.opacity = 0;
-            wordsGroup.add(wordSprite);
+            word.position.set(Math.cos(angle) * radius, 0.1, Math.sin(angle) * radius);
+            word.scale.set(0.2, 0.06, 1); 
+            word.material.opacity = 0;
+            wordsGroup.add(word);
         }
 
-        // 5. ESTRELLAS FUGACES
+        // ESTRELLAS FUGACES
         const shootingStars = [];
-        const shootingStarMat = new THREE.SpriteMaterial({
-            map: destelloTexture, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false
-        });
-
         function spawnShootingStar() {
-            const star = new THREE.Sprite(shootingStarMat.clone());
+            const star = new THREE.Sprite(new THREE.SpriteMaterial({ map: textureLoader.load('destello.png'), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
             star.position.set((Math.random()-0.5)*150, (Math.random()-0.5)*100, -45); 
             star.scale.set(6, 0.3, 1); 
-            star.userData.velocity = new THREE.Vector3((Math.random()-0.5)*15, (Math.random()-0.5)*10, 0);
-            star.userData.opacity = 1.0;
-            scene.add(star);
-            shootingStars.push(star);
+            star.userData = { vel: new THREE.Vector3((Math.random()-0.5)*15, (Math.random()-0.5)*10, 0), op: 1.0 };
+            scene.add(star); shootingStars.push(star);
         }
 
         camera.position.set(0, 3, 10);
@@ -225,46 +144,28 @@ ringGroup.add(glowRing);
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
-
             saturn.rotation.y += 0.001;
             ringGroup.rotation.y += 0.0003;
 
-            // Fondo con seguimiento
-            const vector = new THREE.Vector3(0, 0, -50); 
-            vector.applyQuaternion(camera.quaternion);
-            backgroundPlane.position.copy(camera.position).add(vector);
-            backgroundPlane.quaternion.copy(camera.quaternion);
+            const vector = new THREE.Vector3(0, 0, -50).applyQuaternion(camera.quaternion);
+            bgPlane.position.copy(camera.position).add(vector);
+            bgPlane.quaternion.copy(camera.quaternion);
 
-            for (let i = shootingStars.length - 1; i >= 0; i--) {
-                const star = shootingStars[i];
-                star.position.add(star.userData.velocity);
-                star.userData.opacity -= 0.02; 
-                star.material.opacity = star.userData.opacity;
-                if (star.userData.opacity <= 0) {
-                    scene.remove(star);
-                    shootingStars.splice(i, 1);
-                }
-            }
-
+            shootingStars.forEach((s, i) => {
+                s.position.add(s.userData.vel); s.userData.op -= 0.02; s.material.opacity = s.userData.op;
+                if(s.userData.op <= 0) { scene.remove(s); shootingStars.splice(i, 1); }
+            });
             if (Math.random() < 0.012) spawnShootingStar();
 
             const dist = camera.position.distanceTo(scene.position);
-            if (dist < 7.5) {
-                starsGroup.children.forEach(s => s.material.opacity = 0.3);
-                wordsGroup.children.forEach(w => w.material.opacity = 1);
-            } else {
-                starsGroup.children.forEach(s => s.material.opacity = 1);
-                wordsGroup.children.forEach(w => w.material.opacity = 0);
-            }
+            wordsGroup.children.forEach(w => w.material.opacity = dist < 7.5 ? 1 : 0);
+            starsGroup.children.forEach(s => s.material.opacity = dist < 7.5 ? 0.3 : 1);
 
             renderer.render(scene, camera);
         }
-
         animate();
-
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
     </script>
