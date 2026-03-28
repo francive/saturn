@@ -100,18 +100,10 @@
         const atmosGlow = new THREE.Mesh(new THREE.SphereGeometry(1.35, 64, 64), atmosGlowMat);
         scene.add(atmosGlow);
 
-        // 3. GRUPO UNIFICADO DEL ANILLO (Crucial para el ángulo)
-        // Creamos UN SOLO grupo que contendrá todo y lo inclinaremos una sola vez.
-        const unifiedRingGroup = new THREE.Group();
-        unifiedRingGroup.rotation.x = Math.PI * 0.18; // Inclinación cinematográfica unificada
-        scene.add(unifiedRingGroup);
+        // 3. ELEMENTOS DEL ANILLO (Inclinación individual a 25°)
+        const angle25 = Math.PI * 0.14; // Aproximadamente 25 grados
 
-        const starsGroup = new THREE.Group();
-        const wordsGroup = new THREE.Group();
-        // Las partículas y palabras heredan la rotación de unifiedRingGroup.
-        unifiedRingGroup.add(starsGroup, wordsGroup);
-
-        // --- CORRECCIÓN: ANILLO SÓLIDO BRILLANTE UNIFICADO EN ÁNGULO ---
+        // --- ANILLO SÓLIDO AMARILLO ---
         const solidRingGeo = new THREE.RingGeometry(2.2, 4.0, 128);
         const solidRingMat = new THREE.ShaderMaterial({
             vertexShader: `
@@ -133,31 +125,36 @@
         });
 
         const solidRing = new THREE.Mesh(solidRingGeo, solidRingMat);
-        // Lo añadimos al grupo unificado, por lo que hereda el ángulo de unifiedRingGroup.
-        // Solo necesitamos ajustarlo ligeramente abajo en Y (-0.1) para que floten las letras.
-        solidRing.position.y = -0.1;
-        unifiedRingGroup.add(solidRing);
+        solidRing.rotation.x = angle25; // Inclinación corregida
+        solidRing.position.y = -0.05; 
+        scene.add(solidRing);
 
-        // --- CORRECCIÓN FINAL PARTICULAS: Polvo etéreo que da textura ---
+        // --- GRUPO DE PARTÍCULAS (ESTRELLAS) ---
+        const starsGroup = new THREE.Group();
+        starsGroup.rotation.x = angle25; // Misma inclinación que el anillo
+        scene.add(starsGroup);
+
         const destelloTexture = textureLoader.load('destello.png');
         const starMat = new THREE.SpriteMaterial({ 
             map: destelloTexture, 
             transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8
         });
 
-        // Usamos menos partículas pero más dispersas para dar textura sobre el disco sólido (como image_10.png)
         for (let i = 0; i < 4000; i++) {
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.8; 
             const star = new THREE.Sprite(starMat.clone());
             const s = Math.random() * 0.08 + 0.02; 
             star.scale.set(s, s, 1);
-            // Las partículas se posicionan en el plano del unifiedRingGroup (heredan rotación X)
-            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.15, Math.sin(angle) * radius);
+            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
             starsGroup.add(star);
         }
 
-        // 4. PALABRAS (Ahora flotando SOBRE el disco sólido)
+        // 4. PALABRAS (Georgia)
+        const wordsGroup = new THREE.Group();
+        wordsGroup.rotation.x = angle25; // Misma inclinación que el resto
+        scene.add(wordsGroup);
+
         const loveWords = ["Te amo", "✨ Eres muy especial ✨", "Flores amarillas", "Nuestro Amor", "Te adoro", "Siempre brillas", "Flores para ti", "Infinito", "Destino", "Te adoro", "Gracia", "Cielo"];
         
         for(let i = 0; i < 400; i++) {
@@ -173,8 +170,7 @@
 
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.2 + Math.pow(Math.random(), 0.5) * 3.8; 
-            // Posicionadas para que floten SOBRE el disco sólido de polvo
-            wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
+            wordSprite.position.set(Math.cos(angle) * radius, 0.1, Math.sin(angle) * radius);
             wordSprite.scale.set(0.1, 0.025, 1); 
             wordSprite.material.opacity = 0;
             wordsGroup.add(wordSprite);
@@ -205,7 +201,11 @@
             controls.update();
 
             saturn.rotation.y += 0.001;
-            unifiedRingGroup.rotation.y += 0.0003; // Rotación unificada
+            
+            // Rotación sobre su propio eje (Y local después de la rotación X)
+            solidRing.rotation.z -= 0.0003; 
+            starsGroup.rotation.z -= 0.0003;
+            wordsGroup.rotation.z -= 0.0003;
 
             // Fondo con seguimiento
             const vector = new THREE.Vector3(0, 0, -50); 
@@ -228,7 +228,6 @@
 
             const dist = camera.position.distanceTo(scene.position);
             if (dist < 7.5) {
-                // Al hacer zoom, baja brillo del anillo de polvo para resaltar palabras
                 wordsGroup.children.forEach(w => w.material.opacity = 1);
                 solidRing.material.opacity = 0.5;
             } else {
@@ -239,7 +238,7 @@
             renderer.render(scene, camera);
         }
 
-        animate();
+            animate();
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
