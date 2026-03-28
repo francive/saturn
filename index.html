@@ -4,17 +4,58 @@
     <meta charset="UTF-8">
     <title>Un Universo Infinito para Ti</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
+        
+        /* Panel de control de volumen */
+        #audio-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            color: white;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        input[type=range] { cursor: pointer; }
     </style>
 </head>
 <body>
+
+    <div id="audio-container">
+        <label for="volumeRange">Volumen</label>
+        <input type="range" id="volumeRange" min="0" max="1" step="0.1" value="0.5">
+    </div>
+
+    <audio id="backgroundAudio" loop>
+        <source src="saturnaudio.MP3" type="audio/mpeg">
+    </audio>
+
     <script type="module">
         import * as THREE from 'https://unpkg.com/three@0.136.0/build/three.module.js';
         import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
 
         const scene = new THREE.Scene();
         const textureLoader = new THREE.TextureLoader();
+
+        // MANEJO DE AUDIO
+        const audio = document.getElementById('backgroundAudio');
+        const volumeSlider = document.getElementById('volumeRange');
+        
+        // Iniciar audio al primer clic (necesario por seguridad del navegador)
+        window.addEventListener('click', () => {
+            audio.play();
+        }, { once: true });
+
+        volumeSlider.addEventListener('input', (e) => {
+            audio.volume = e.target.value;
+        });
 
         // 1. FONDO (Cercanía normal: -50)
         const bgTexture = textureLoader.load('estrellas.jpg'); 
@@ -92,7 +133,7 @@
             starsGroup.add(star);
         }
 
-        // 4. GENERACIÓN DE PALABRAS (Canvas dinámico)
+        // 4. PALABRAS
         const loveWords = ["Infinito", "Destino", "Magia", "Luz", "Cielo", "Vida", "Tesoro", "Esencia", "Eternidad", "Suspiro", "Latido", "Universo", "Alma", "Poesía", "Sueño", "Dulzura", "Pasión", "Ternura", "Compromiso", "Refugio", "Paz", "Felicidad", "Amanecer", "Estrella", "Milagro", "Gracia", "Encanto", "Adoración", "Lealtad", "Sinceridad", "Abrazo", "Beso", "Calma", "Fuego", "Unión", "Raíz", "Brillo", "Anhelo", "Valentía", "Cuidado", "Respeto", "Incondicional", "Mundo"];
 
         for(let i = 0; i < 400; i++) {
@@ -124,15 +165,12 @@
 
         function spawnShootingStar() {
             const star = new THREE.Sprite(shootingStarMat.clone());
-            // Se posicionan justo delante del fondo
             const startX = (Math.random() - 0.5) * 150;
             const startY = (Math.random() - 0.5) * 100;
             star.position.set(startX, startY, -45); 
-            
-            star.scale.set(6, 0.3, 1); // Mantengo tu escala de estela original
+            star.scale.set(6, 0.3, 1); 
             star.userData.velocity = new THREE.Vector3((Math.random() - 0.5) * 15, (Math.random() - 0.5) * 10, 0);
             star.userData.opacity = 1.0;
-            
             scene.add(star);
             shootingStars.push(star);
         }
@@ -148,13 +186,12 @@
             saturn.rotation.y += 0.001;
             ringGroup.rotation.y += 0.0003;
 
-            // Fondo con seguimiento
             const vector = new THREE.Vector3(0, 0, -50); 
             vector.applyQuaternion(camera.quaternion);
             backgroundPlane.position.copy(camera.position).add(vector);
             backgroundPlane.quaternion.copy(camera.quaternion);
 
-            // Animación estrellas fugaces
+            // Actualizar estrellas fugaces
             for (let i = shootingStars.length - 1; i >= 0; i--) {
                 const star = shootingStars[i];
                 star.position.add(star.userData.velocity);
@@ -166,9 +203,9 @@
                 }
             }
 
-            if (Math.random() < 0.005) spawnShootingStar();
+            // Probabilidad aumentada para estrellas cada 1.5 - 2 seg aprox.
+            if (Math.random() < 0.012) spawnShootingStar();
 
-            // Lógica de visibilidad (zoom)
             const dist = camera.position.distanceTo(scene.position);
             if (dist < 7.5) {
                 starsGroup.children.forEach(s => s.material.opacity = 0.3);
