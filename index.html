@@ -107,8 +107,7 @@
         scene.add(ringGroup);
         ringGroup.add(starsGroup, wordsGroup);
 
-        // --- CORRECCIÓN: SEPARACIÓN MÍNIMA Y RADIO AJUSTADO ---
-        // Usamos un plano de 20x20 para que no haya cortes rectos en los bordes
+        // --- CORRECCIÓN FINAL: ANILLO INTERIOR ANCHO Y EXTERIOR MUY CERCANO ---
         const patternRingGeo = new THREE.PlaneGeometry(20, 20);
         
         const patternRingMat = new THREE.ShaderMaterial({
@@ -124,18 +123,18 @@
                 void main() {
                     float dist = distance(vUv, vec2(0.5, 0.5));
                     
-                    // Aumentamos frecuencia para franjas más densas y juntas
-                    float ringPattern = sin(dist * 24.0);
+                    // Frecuencia ajustada para que el patrón sea denso
+                    float ringPattern = sin(dist * 28.0);
                     
-                    // Engrosamos las franjas amarillas para reducir el espacio negro
-                    float bands = smoothstep(-0.4, 0.4, ringPattern);
+                    // Engrosamos el patrón de bandas
+                    float bands = smoothstep(-0.5, 0.5, ringPattern);
                     
-                    // MÁSCARA: 
-                    // Empieza en 0.12 (pegado al planeta)
-                    // Termina en 0.35 (radio reducido para que el anillo grande esté cerca del centro)
-                    float mask = smoothstep(0.12, 0.15, dist) * (1.0 - smoothstep(0.32, 0.35, dist));
+                    // MÁSCARA AJUSTADA:
+                    // 1. Iniciamos en 0.12 para que toque casi el planeta.
+                    // 2. Terminamos en 0.28 (Antes 0.35) para que el anillo exterior sea pequeño y esté pegado al interior.
+                    float mask = smoothstep(0.12, 0.14, dist) * (1.0 - smoothstep(0.26, 0.28, dist));
                     
-                    float alpha = bands * mask * 0.8;
+                    float alpha = bands * mask * 0.85;
                     vec3 color = vec3(1.0, 0.88, 0.4); 
                     
                     gl_FragColor = vec4(color, alpha);
@@ -161,7 +160,7 @@
 
         for (let i = 0; i < 4000; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.8; 
+            const radius = 1.8 + Math.pow(Math.random(), 0.5) * 3.5; 
             const star = new THREE.Sprite(starMat.clone());
             const s = Math.random() * 0.08 + 0.02; 
             star.scale.set(s, s, 1);
@@ -184,7 +183,7 @@
             }));
 
             const angle = Math.random() * Math.PI * 2;
-            const radius = 2.2 + Math.pow(Math.random(), 0.5) * 3.8; 
+            const radius = 2.0 + Math.pow(Math.random(), 0.5) * 3.5; 
             wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
             wordSprite.scale.set(0.1, 0.025, 1); 
             wordSprite.material.opacity = 0;
