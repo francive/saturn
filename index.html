@@ -41,12 +41,15 @@
         const scene = new THREE.Scene();
         const textureLoader = new THREE.TextureLoader();
 
+        // Lógica de cliente (Ruta de fotos dinámica)
         const urlParams = new URLSearchParams(window.location.search);
         const user = urlParams.get('user') || 'cliente_01'; 
 
+        // LUCES
         const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); 
         scene.add(ambientLight);
 
+        // FONDO
         const bgTexture = textureLoader.load('assets/textures/estrellas.jpg'); 
         const bgMaterial = new THREE.MeshBasicMaterial({ map: bgTexture, transparent: true, depthWrite: false });
         const backgroundPlane = new THREE.Mesh(new THREE.PlaneGeometry(800, 480), bgMaterial);
@@ -58,12 +61,14 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
+        // SATURNO
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
             new THREE.MeshBasicMaterial({ map: textureLoader.load('assets/textures/saturno.jpg') })
         );
         scene.add(saturn);
 
+        // GRUPOS
         const atmosphereStars = new THREE.Group(); 
         const ringGroup = new THREE.Group();        
         const ringStars = new THREE.Group();        
@@ -76,6 +81,7 @@
 
         const destelloTexture = textureLoader.load('assets/textures/destello.png');
 
+        // ESTRELLAS DEL DOMO
         for (let i = 0; i < 1500; i++) {
             const starMat = new THREE.SpriteMaterial({ 
                 map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: Math.random() * 0.6 + 0.2
@@ -90,6 +96,7 @@
             atmosphereStars.add(star);
         }
 
+        // ESTRELLAS DE LOS ANILLOS
         for (let i = 0; i < 1000; i++) {
             const starMat = new THREE.SpriteMaterial({ 
                 map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 
@@ -103,6 +110,7 @@
             ringStars.add(star);
         }
 
+        // ANILLOS VISUALES
         const ringMat = new THREE.MeshBasicMaterial({ 
             color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false
         });
@@ -113,6 +121,7 @@
             ringGroup.add(mesh);
         });
 
+        // FRASES
         const loveWords = ["Te amo", "✨ Eres muy especial ✨", "Flores amarillas", "Nuestro Amor", "Te adoro", "Siempre brillas", "Flores para ti", "Infinito"];
         for(let i = 0; i < 100; i++) {
             const canvas = document.createElement('canvas');
@@ -128,22 +137,48 @@
             const radius = 2.0 + Math.random() * 3.0; 
             wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
             wordSprite.scale.set(0.5, 0.12, 1); 
-            wordSprite.visible = false; // Corrección: Invisible al inicio
+            wordSprite.visible = false; 
             wordsGroup.add(wordSprite);
         }
 
-        for (let i = 1; i <= 40; i++) {
-            const photoTexture = textureLoader.load(`assets/photos/${user}/foto (${i}).jpg`);
-            const photoMat = new THREE.SpriteMaterial({ map: photoTexture, transparent: true, opacity: 0 });
-            const photoSprite = new THREE.Sprite(photoMat);
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 2.0 + Math.random() * 2.8; 
-            photoSprite.position.set(Math.cos(angle) * radius, 0.3, Math.sin(angle) * radius);
-            photoSprite.scale.set(0.5, 0.5, 1);
-            photoSprite.visible = false; // Corrección: Invisible para quitar manchas negras
-            photoGroup.add(photoSprite);
-        }
+        // --- CARGA DINÁMICA DE FOTOS CON AUTO-DETECCIÓN ---
+        function cargarSiguienteFoto(index) {
+            const ruta = `assets/photos/${user}/foto (${index}).jpg`;
+            
+            textureLoader.load(
+                ruta, 
+                (texture) => {
+                    const aspect = texture.image.width / texture.image.height;
+                    const photoMat = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 0 });
+                    const photoSprite = new THREE.Sprite(photoMat);
 
+                    // Ajuste de dimensiones automático (Evita manchas negras en verticales)
+                    if (aspect > 1) {
+                        photoSprite.scale.set(0.6 * aspect, 0.6, 1); // Horizontal
+                    } else {
+                        photoSprite.scale.set(0.5, 0.5 / aspect, 1); // Vertical/Cuadrada
+                    }
+
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = 2.0 + Math.random() * 2.8; 
+                    photoSprite.position.set(Math.cos(angle) * radius, 0.3, Math.sin(angle) * radius);
+                    
+                    photoSprite.visible = false;
+                    photoGroup.add(photoSprite);
+
+                    // Intentar cargar la siguiente
+                    cargarSiguienteFoto(index + 1);
+                },
+                undefined,
+                (err) => {
+                    // Se detiene automáticamente cuando no encuentra más fotos
+                    console.log(`Detección finalizada para ${user}.`);
+                }
+            );
+        }
+        cargarSiguienteFoto(1);
+
+        // AUDIO
         const audio = document.getElementById('backgroundAudio');
         window.addEventListener('click', () => { audio.play(); }, { once: true });
         document.getElementById('volumeRange').addEventListener('input', (e) => { audio.volume = e.target.value; });
@@ -164,6 +199,7 @@
                 if (i % 30 === 0) s.material.opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.001 + i) * 0.4);
             });
 
+            // Fondo infinito
             const vector = new THREE.Vector3(0, 0, -150); 
             vector.applyQuaternion(camera.quaternion);
             backgroundPlane.position.copy(camera.position).add(vector);
@@ -173,7 +209,6 @@
             const isNear = dist < 9; 
             const opacity = isNear ? 1 : 0; 
             
-            // Aplicar corrección de visibilidad para frases y fotos
             wordsGroup.children.forEach(w => {
                 w.material.opacity = opacity;
                 w.visible = isNear;
