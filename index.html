@@ -77,8 +77,10 @@
         loadingManager.onLoad = () => { btnStart.style.display = 'block'; document.getElementById('progress-container').style.display = 'none'; };
 
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 4000);
+        
+        // Renderer mejorado para evitar manchas negras (Z-fighting)
+        const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
@@ -88,19 +90,19 @@
         const user = urlParams.get('user') || 'cliente_01';
 
         // --- LUCES ---
-        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
-        sunLight.position.set(5, 3, 5);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        sunLight.position.set(10, 10, 10);
         scene.add(sunLight);
 
         // --- FONDO DE ESTRELLAS ---
         const starGeo = new THREE.BufferGeometry();
         const starCoords = [];
         for (let i = 0; i < 15000; i++) {
-            starCoords.push((Math.random() - 0.5) * 2000, (Math.random() - 0.5) * 2000, (Math.random() - 0.5) * 2000);
+            starCoords.push((Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000);
         }
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-        const starPoints = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.7, transparent: true }));
+        const starPoints = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, transparent: true }));
         scene.add(starPoints);
 
         // --- SATURNO ---
@@ -111,8 +113,8 @@
         scene.add(saturn);
 
         const atmosphere = new THREE.Mesh(
-            new THREE.SphereGeometry(1.27, 64, 64),
-            new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.2, side: THREE.BackSide })
+            new THREE.SphereGeometry(1.28, 64, 64),
+            new THREE.MeshBasicMaterial({ color: 0xffcc00, transparent: true, opacity: 0.15, side: THREE.BackSide })
         );
         scene.add(atmosphere);
 
@@ -126,25 +128,37 @@
         const photoGroup = new THREE.Group();
         mainRingGroup.add(ringStars, wordsGroup, photoGroup);
 
-        // --- ANILLOS VISUALES ---
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending });
-        const ring1 = new THREE.Mesh(new THREE.RingGeometry(1.8, 3.2, 64), ringMat);
-        const ring2 = new THREE.Mesh(new THREE.RingGeometry(3.5, 4.8, 64), ringMat);
+        // --- ANILLOS VISUALES (MÁS BRILLANTES) ---
+        const ringMat = new THREE.MeshBasicMaterial({ 
+            color: 0xffd24d, 
+            side: THREE.DoubleSide, 
+            transparent: true, 
+            opacity: 0.5, 
+            blending: THREE.AdditiveBlending,
+            depthWrite: false 
+        });
+        const ring1 = new THREE.Mesh(new THREE.RingGeometry(1.8, 3.2, 128), ringMat);
+        const ring2 = new THREE.Mesh(new THREE.RingGeometry(3.5, 4.8, 128), ringMat);
         ring1.rotation.x = ring2.rotation.x = Math.PI / 2;
         mainRingGroup.add(ring1, ring2);
 
-        // --- ESTRELLAS DEL ANILLO (DESTELLOS) ---
+        // --- ESTRELLAS DEL ANILLO (MÁS INTENSAS) ---
         const destelloTex = textureLoader.load('./assets/textures/destello.png');
-        for (let i = 0; i < 800; i++) {
-            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: destelloTex, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.6 }));
+        for (let i = 0; i < 1200; i++) {
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
+                map: destelloTex, 
+                transparent: true, 
+                blending: THREE.AdditiveBlending, 
+                opacity: 0.9 
+            }));
             const angle = Math.random() * Math.PI * 2;
             const radius = 1.8 + Math.random() * 3.0;
-            sprite.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
-            sprite.scale.set(0.15, 0.15, 1);
+            sprite.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.15, Math.sin(angle) * radius);
+            sprite.scale.set(0.2, 0.2, 1);
             ringStars.add(sprite);
         }
 
-        // --- FRASES (100 IDIOMAS) ---
+        // --- FRASES (100 IDIOMAS ÚNICOS) ---
         const rawIdiomas = [
             "Español—Te amo", "Inglés—I love you", "Francés—Je t’aime", "Italiano—Ti amo", "Alemán—Ich liebe dich",
             "Portugués—Eu te amo", "Ruso—Я тебя люблю", "Japonés—愛してる", "Coreano—사랑해", "Chino—我爱你",
@@ -152,23 +166,42 @@
             "Sueco—Jag älskar dig", "Polaco—Kocham cię", "Checo—Miluji tě", "Húngaro—Szeretlek", "Rumano—Te iubesc",
             "Finlandés—Rakastan sinua", "Hebreo—אני אוהב אותך", "Filipino—Mahal kita", "Indonesio—Aku cinta kamu",
             "Swahili—Nakupenda", "Ucraniano—Я тебе кохаю", "Catalán—T’estimo", "Euskera—Maite zaitut", "Quechua—Kuyayki",
-            "Guaraní—Rohayhu", "Náhuatl—Nimitztlazohtla", "Maya—In k’áatech", "Latín—Te amo", "Esperanto—Mi amas vin"
-            // Se repiten para llenar el espacio visual de 100 elementos
+            "Guaraní—Rohayhu", "Náhuatl—Nimitztlazohtla", "Maya—In k’áatech", "Latín—Te amo", "Esperanto—Mi amas vin",
+            "Danés—Jeg elsker dig", "Noruego—Jeg elsker deg", "Eslovaco—Ľúbim ťa", "Serbio—Волим те", "Croata—Volim te",
+            "Bosnio—Volim te", "Islandés—Ég elska þig", "Maltés—Inħobbok", "Malayo—Saya cinta padamu", "Zulú—Ngiyakuthanda",
+            "Xhosa—Ndiyakuthanda", "Yoruba—Mo nifẹ rẹ", "Amárico—እወድሃለሁ", "Somali—Waan ku jeclahay", "Nepalí—म तिमीलाई माया गर्छु",
+            "Punjabi—ਮੈਂ ਤੈਨੂੰ ਪਿਆਰ ਕਰਦਾ ਹਾਂ", "Urdu—میں تم سے پیار کرتا ہوں", "Persa—دوستت دارم", "Kurdo—Ez hej te dikim",
+            "Georgiano—მიყვარხار", "Armenio—Ես սիրում եմ քեզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
+            "Lituano—Aš tave myliu", "Bielorruso—Я цябе кахаю", "Gallego—Quérote", "Aymara—Mä munta", "Cebuano—Gihigugma tika",
+            "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་དུང་ཡོད།",
+            "Hawaiano—Aloha wau iā ‘oe", "Samoano—Ou te alofa ia te oe", "Maorí—Aroha atu au ki a koe", "Fiyiano—Au domoni iko", "Tonga—‘Ofa atu",
+            "Lingala—Nalingi yo", "Hausa—Ina son ka", "Igbo—A hụrụ m gị n’anya", "Malgache—Tiako ianao", "Tártaro—Мин сине яратам",
+            "Kazajo—Мен сені жақсы көремін", "Uzbek—Men seni sevaman", "Tayiko—Ман туро дӯст медорам", "Sinhala—මම ඔයාට ආදරෙයි", "Haitiano—Mwen renmen ou",
+            "Irlandés—Taim i’ ngra leat", "Luxemburgués—Ech hunn dech gär", "Sánscrito—त्वामहम् स्नेहे", "Arameo—ܐܚܒܟ", "Copto—ⲁⲓⲉ rⲉϩⲟ",
+            "Bengalí—আমি তোমায় ভালোবাসি", "Guyaratí—હું તને પ્રેમ કરું છું", "Canarés—ನಾನು ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ", "Malabar—ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു", "Maratí—मी तुझ्यावर प्रेम करतो",
+            "Télugu—నేను నిన్ను ప్రేమిస్తున్నాను", "Tamil—நான் உன்னை காதலிக்கிறேன்", "Vietnamita—Tôi yêu bạn", "Tailandés—ฉันรักคุณ", "Albanés—Të dua"
         ];
 
-        for (let i = 0; i < 100; i++) {
-            const data = rawIdiomas[i % rawIdiomas.length].split('—');
+        for (let i = 0; i < rawIdiomas.length; i++) {
+            const data = rawIdiomas[i].split('—');
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = 512; canvas.height = 128;
             ctx.font = 'bold 42px sans-serif'; ctx.fillStyle = 'white'; ctx.textAlign = 'center';
             ctx.fillText(data[1], 256, 80);
 
-            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, opacity: 0 }));
-            const angle = (i / 100) * Math.PI * 2;
-            const radius = 2.2 + Math.random() * 2.5;
-            sprite.position.set(Math.cos(angle) * radius, 0.2, Math.sin(angle) * radius);
-            sprite.scale.set(0.7, 0.18, 1);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
+                map: new THREE.CanvasTexture(canvas), 
+                transparent: true, 
+                opacity: 0,
+                depthTest: true
+            }));
+            
+            // Distribución mejorada: Espiral/Círculos concéntricos para evitar colisiones
+            const angle = (i / rawIdiomas.length) * Math.PI * 2;
+            const radius = 2.4 + (i % 3) * 0.8; // Crea 3 niveles de anillos para las frases
+            sprite.position.set(Math.cos(angle) * radius, (i % 2 === 0 ? 0.3 : -0.3), Math.sin(angle) * radius);
+            sprite.scale.set(0.8, 0.2, 1);
             sprite.userData = { idioma: data[0] };
             wordsGroup.add(sprite);
         }
@@ -178,13 +211,13 @@
             textureLoader.load(`./assets/photos/${user}/foto (${idx}).jpg`, (tex) => {
                 const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0 }));
                 const aspect = tex.image.width / tex.image.height;
-                sprite.scale.set(0.5 * aspect, 0.5, 1);
+                sprite.scale.set(0.6 * aspect, 0.6, 1);
                 const angle = Math.random() * Math.PI * 2;
-                const radius = 2.5 + Math.random() * 2.0;
-                sprite.position.set(Math.cos(angle) * radius, 0.4, Math.sin(angle) * radius);
+                const radius = 2.8 + Math.random() * 1.5;
+                sprite.position.set(Math.cos(angle) * radius, 0.5, Math.sin(angle) * radius);
                 photoGroup.add(sprite);
-                loadPhotos(idx + 1);
-            }, undefined, () => console.log("Fotos cargadas"));
+                if(idx < 50) loadPhotos(idx + 1); // Límite de seguridad
+            }, undefined, () => console.log("Carga finalizada"));
         }
         loadPhotos(1);
 
@@ -207,16 +240,18 @@
         camera.position.set(0, 5, 12);
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.minDistance = 2;
+        controls.maxDistance = 20;
 
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
             saturn.rotation.y += 0.002;
-            mainRingGroup.rotation.y += 0.0005;
+            mainRingGroup.rotation.y += 0.0008;
             starPoints.rotation.y += 0.0001;
 
-            const isNear = camera.position.distanceTo(scene.position) < 10;
-            const targetAlpha = isNear ? 1 : 0;
+            const dist = camera.position.distanceTo(scene.position);
+            const targetAlpha = dist < 12 ? 1 : 0;
 
             wordsGroup.children.forEach(w => w.material.opacity = THREE.MathUtils.lerp(w.material.opacity, targetAlpha, 0.05));
             photoGroup.children.forEach(p => p.material.opacity = THREE.MathUtils.lerp(p.material.opacity, targetAlpha, 0.05));
