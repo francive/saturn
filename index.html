@@ -2,115 +2,52 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Un Universo Inmersivo para Ti - Francis Designs</title>
+    <title>Universo Inmersivo - Francis Designs</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         canvas { display: block; }
 
-        /* PANTALLA DE CARGA */
         #loader-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 1000;
             transition: opacity 0.5s ease;
         }
 
-        #saturn-logo {
-            width: 120px;
-            margin-bottom: 20px;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
-        }
-
-        #progress-container {
-            width: 250px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-            overflow: hidden;
-            margin-bottom: 20px;
-        }
-
-        #progress-bar {
-            width: 0%;
-            height: 100%;
-            background: #ffcc00;
-            transition: width 0.3s;
-        }
+        #progress-container { width: 250px; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; margin-top: 20px; }
+        #progress-bar { width: 0%; height: 100%; background: #ffcc00; transition: width 0.3s; }
 
         #btn-start {
-            display: none;
-            padding: 12px 30px;
-            background: #ffcc00;
-            color: #000;
-            border: none;
-            border-radius: 25px;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+            display: none; padding: 12px 30px; background: #ffcc00; color: #000;
+            border: none; border-radius: 25px; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 1px; margin-top: 20px;
         }
 
         #audio-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 8px;
-            backdrop-filter: blur(5px);
-            color: white;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.5);
+            padding: 10px; border-radius: 8px; color: white; z-index: 100;
+            display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.2);
         }
 
-        /* MENSAJE DE IDIOMA */
         #language-toast {
-            position: fixed;
-            bottom: 10%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 204, 0, 0.9);
-            color: #000;
-            padding: 15px 30px;
-            border-radius: 30px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            display: none;
-            z-index: 2000;
-            box-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
-            pointer-events: none;
-            text-align: center;
+            position: fixed; bottom: 10%; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 204, 0, 0.95); color: #000; padding: 12px 25px;
+            border-radius: 30px; font-weight: bold; display: none; z-index: 2000;
+            box-shadow: 0 0 20px rgba(255, 204, 0, 0.4); pointer-events: none;
         }
     </style>
 </head>
 <body>
 
     <div id="loader-screen">
-        <img id="saturn-logo" src="assets/textures/saturn_icon.png" alt="Logo">
-        <div id="progress-container">
-            <div id="progress-bar"></div>
-        </div>
+        <div id="progress-container"><div id="progress-bar"></div></div>
         <button id="btn-start">Comenzar Experiencia</button>
     </div>
 
     <div id="language-toast"></div>
 
     <div id="audio-container">
-        <label for="volumeRange">Volumen</label>
+        <label>Volumen</label>
         <input type="range" id="volumeRange" min="0" max="1" step="0.1" value="0.5">
     </div>
 
@@ -134,165 +71,166 @@
         const loadingManager = new THREE.LoadingManager();
         const progressBar = document.getElementById('progress-bar');
         const btnStart = document.getElementById('btn-start');
-        const progressContainer = document.getElementById('progress-container');
         const toast = document.getElementById('language-toast');
 
-        loadingManager.onLoad = () => {
-            progressContainer.style.display = 'none';
-            btnStart.style.display = 'block';
-        };
+        loadingManager.onProgress = (url, loaded, total) => { progressBar.style.width = (loaded / total * 100) + '%'; };
+        loadingManager.onLoad = () => { btnStart.style.display = 'block'; document.getElementById('progress-container').style.display = 'none'; };
 
         const scene = new THREE.Scene();
-        const textureLoader = new THREE.TextureLoader(loadingManager);
-        textureLoader.setCrossOrigin('anonymous');
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const user = urlParams.get('user') || 'cliente_01'; 
-
-        // --- 1. CONFIGURACIÓN ---
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // --- 2. OBJETOS BASE ---
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-        const sideLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        sideLight.position.set(5, 3, 5);
-        scene.add(sideLight);
+        const textureLoader = new THREE.TextureLoader(loadingManager);
+        const urlParams = new URLSearchParams(window.location.search);
+        const user = urlParams.get('user') || 'cliente_01';
 
+        // --- LUCES ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+        sunLight.position.set(5, 3, 5);
+        scene.add(sunLight);
+
+        // --- FONDO DE ESTRELLAS ---
+        const starGeo = new THREE.BufferGeometry();
+        const starCoords = [];
+        for (let i = 0; i < 15000; i++) {
+            starCoords.push((Math.random() - 0.5) * 2000, (Math.random() - 0.5) * 2000, (Math.random() - 0.5) * 2000);
+        }
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
+        const starPoints = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.7, transparent: true }));
+        scene.add(starPoints);
+
+        // --- SATURNO ---
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
-            new THREE.MeshStandardMaterial({ 
-                map: textureLoader.load('./assets/textures/saturno.jpg'),
-                roughness: 1
-            })
+            new THREE.MeshStandardMaterial({ map: textureLoader.load('./assets/textures/saturno.jpg') })
         );
         scene.add(saturn);
 
-        const atmosphereGlow = new THREE.Mesh(
+        const atmosphere = new THREE.Mesh(
             new THREE.SphereGeometry(1.27, 64, 64),
-            new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.35, side: THREE.BackSide })
+            new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.2, side: THREE.BackSide })
         );
-        scene.add(atmosphereGlow);
+        scene.add(atmosphere);
 
-        const ringGroup = new THREE.Group();
+        // --- GRUPOS DEL ANILLO ---
+        const mainRingGroup = new THREE.Group();
+        mainRingGroup.rotation.x = Math.PI * 0.15;
+        scene.add(mainRingGroup);
+
+        const ringStars = new THREE.Group();
         const wordsGroup = new THREE.Group();
         const photoGroup = new THREE.Group();
-        ringGroup.rotation.x = Math.PI * 0.15;
-        scene.add(ringGroup);
-        ringGroup.add(wordsGroup, photoGroup);
+        mainRingGroup.add(ringStars, wordsGroup, photoGroup);
 
-        // --- 3. DATOS DE IDIOMAS (100) ---
-        const idiomasAmor = [
-            { L: "Español", T: "Te amo" }, { L: "Inglés", T: "I love you" }, { L: "Francés", T: "Je t’aime" },
-            { L: "Italiano", T: "Ti amo" }, { L: "Alemán", T: "Ich liebe dich" }, { L: "Portugués", T: "Eu te amo" },
-            { L: "Ruso", T: "Я тебя люблю" }, { L: "Japonés", T: "愛してる" }, { L: "Coreano", T: "사랑해" },
-            { L: "Chino mandarín", T: "我爱你" }, { L: "Árabe", T: "أحبك" }, { L: "Hindi", T: "मैं तुमसे प्यार करता हूँ" },
-            { L: "Turco", T: "Seni seviyorum" }, { L: "Griego", T: "Σ' αγαπώ" }, { L: "Holandés", T: "Ik hou van jou" },
-            { L: "Sueco", T: "Jag älskar dig" }, { L: "Polaco", T: "Kocham cię" }, { L: "Hebreo", T: "אני אוהב אותך" },
-            { L: "Filipino", T: "Mahal kita" }, { L: "Swahili", T: "Nakupenda" }, { L: "Ucraniano", T: "Я тебе кохаю" },
-            { L: "Catalán", T: "T’estimo" }, { L: "Euskera", T: "Maite zaitut" }, { L: "Quechua", T: "Kuyayki" },
-            { L: "Guaraní", T: "Rohayhu" }, { L: "Náhuatl", T: "Nimitztlazohtla" }, { L: "Maya", T: "In k’áatech" },
-            { L: "Hawaiano", T: "Aloha wau iā ‘oe" }, { L: "Samoano", T: "Ou te alofa ia te oe" },
-            { L: "Maorí", T: "Aroha atu au ki a koe" }, { L: "Esperanto", T: "Mi amas vin" },
-            { L: "Latín", T: "Te amo" }, { L: "Sánscrito", T: "त्वामहम् स्नेहे" }, { L: "Finlandés", T: "Rakastan sinua" },
-            { L: "Islandés", T: "Ég elska þig" }, { L: "Bengalí", T: "আমি তোমায় ভালোবাসি" },
-            { L: "Vietnamita", T: "Anh yêu em" }, { L: "Tailandés", T: "ฉันรักคุณ" }, { L: "Persa", T: "دوستت دارم" }
-            // Se pueden expandir hasta completar los 100 siguiendo este formato
+        // --- ANILLOS VISUALES ---
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending });
+        const ring1 = new THREE.Mesh(new THREE.RingGeometry(1.8, 3.2, 64), ringMat);
+        const ring2 = new THREE.Mesh(new THREE.RingGeometry(3.5, 4.8, 64), ringMat);
+        ring1.rotation.x = ring2.rotation.x = Math.PI / 2;
+        mainRingGroup.add(ring1, ring2);
+
+        // --- ESTRELLAS DEL ANILLO (DESTELLOS) ---
+        const destelloTex = textureLoader.load('./assets/textures/destello.png');
+        for (let i = 0; i < 800; i++) {
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: destelloTex, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.6 }));
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 1.8 + Math.random() * 3.0;
+            sprite.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
+            sprite.scale.set(0.15, 0.15, 1);
+            ringStars.add(sprite);
+        }
+
+        // --- FRASES (100 IDIOMAS) ---
+        const rawIdiomas = [
+            "Español—Te amo", "Inglés—I love you", "Francés—Je t’aime", "Italiano—Ti amo", "Alemán—Ich liebe dich",
+            "Portugués—Eu te amo", "Ruso—Я тебя люблю", "Japonés—愛してる", "Coreano—사랑해", "Chino—我爱你",
+            "Árabe—أحبك", "Hindi—प्यार करता हूँ", "Turco—Seni seviyorum", "Griego—Σ' αγαπώ", "Holandés—Ik hou van jou",
+            "Sueco—Jag älskar dig", "Polaco—Kocham cię", "Checo—Miluji tě", "Húngaro—Szeretlek", "Rumano—Te iubesc",
+            "Finlandés—Rakastan sinua", "Hebreo—אני אוהב אותך", "Filipino—Mahal kita", "Indonesio—Aku cinta kamu",
+            "Swahili—Nakupenda", "Ucraniano—Я тебе кохаю", "Catalán—T’estimo", "Euskera—Maite zaitut", "Quechua—Kuyayki",
+            "Guaraní—Rohayhu", "Náhuatl—Nimitztlazohtla", "Maya—In k’áatech", "Latín—Te amo", "Esperanto—Mi amas vin"
+            // Se repiten para llenar el espacio visual de 100 elementos
         ];
 
-        // Crear Sprites de texto
-        idiomasAmor.forEach((item, i) => {
+        for (let i = 0; i < 100; i++) {
+            const data = rawIdiomas[i % rawIdiomas.length].split('—');
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = 512; canvas.height = 128;
-            ctx.font = 'bold 44px "Arial Unicode MS", "Segoe UI Symbol", sans-serif';
-            ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center';
-            ctx.fillText(item.T, 256, 80);
+            ctx.font = 'bold 42px sans-serif'; ctx.fillStyle = 'white'; ctx.textAlign = 'center';
+            ctx.fillText(data[1], 256, 80);
 
-            const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
-                map: new THREE.CanvasTexture(canvas), 
-                transparent: true, 
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                opacity: 0 
-            }));
-
-            const angle = (i / idiomasAmor.length) * Math.PI * 2;
-            const radius = 2.0 + Math.random() * 2.8;
-            wordSprite.position.set(Math.cos(angle) * radius, (Math.random()-0.5)*0.4, Math.sin(angle) * radius);
-            wordSprite.scale.set(0.8, 0.2, 1);
-            wordSprite.userData = { idioma: item.L };
-            wordsGroup.add(wordSprite);
-        });
-
-        // --- 4. INTERACTIVIDAD (TAP/CLICK) ---
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        function checkClick(event) {
-            const x = event.touches ? event.touches[0].clientX : event.clientX;
-            const y = event.touches ? event.touches[0].clientY : event.clientY;
-            
-            mouse.x = (x / window.innerWidth) * 2 - 1;
-            mouse.y = -(y / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(wordsGroup.children);
-
-            if (intersects.length > 0) {
-                const selected = intersects[0].object;
-                toast.innerText = `Así se dice "Te amo" en ${selected.userData.idioma}`;
-                toast.style.display = 'block';
-                setTimeout(() => { toast.style.display = 'none'; }, 3000);
-            }
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, opacity: 0 }));
+            const angle = (i / 100) * Math.PI * 2;
+            const radius = 2.2 + Math.random() * 2.5;
+            sprite.position.set(Math.cos(angle) * radius, 0.2, Math.sin(angle) * radius);
+            sprite.scale.set(0.7, 0.18, 1);
+            sprite.userData = { idioma: data[0] };
+            wordsGroup.add(sprite);
         }
 
-        window.addEventListener('mousedown', checkClick);
-        window.addEventListener('touchstart', checkClick);
+        // --- CARGA DE FOTOS ---
+        function loadPhotos(idx) {
+            textureLoader.load(`./assets/photos/${user}/foto (${idx}).jpg`, (tex) => {
+                const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0 }));
+                const aspect = tex.image.width / tex.image.height;
+                sprite.scale.set(0.5 * aspect, 0.5, 1);
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 2.5 + Math.random() * 2.0;
+                sprite.position.set(Math.cos(angle) * radius, 0.4, Math.sin(angle) * radius);
+                photoGroup.add(sprite);
+                loadPhotos(idx + 1);
+            }, undefined, () => console.log("Fotos cargadas"));
+        }
+        loadPhotos(1);
 
-        // --- 5. ANIMACIÓN Y RENDER ---
-        camera.position.set(0, 5, 15);
+        // --- INTERACCIÓN ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        window.addEventListener('click', (e) => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(wordsGroup.children);
+            if (hits.length > 0) {
+                toast.innerText = `Así se dice "Te amo" en ${hits[0].object.userData.idioma}`;
+                toast.style.display = 'block';
+                setTimeout(() => toast.style.display = 'none', 3000);
+            }
+        });
+
+        // --- ANIMACIÓN ---
+        camera.position.set(0, 5, 12);
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
+            saturn.rotation.y += 0.002;
+            mainRingGroup.rotation.y += 0.0005;
+            starPoints.rotation.y += 0.0001;
 
-            saturn.rotation.y += 0.001;
-            ringGroup.rotation.y += 0.0005;
+            const isNear = camera.position.distanceTo(scene.position) < 10;
+            const targetAlpha = isNear ? 1 : 0;
 
-            const dist = camera.position.distanceTo(scene.position);
-            const isNear = dist < 10;
-            const targetOpacity = isNear ? 1 : 0;
-
-            wordsGroup.children.forEach(w => {
-                w.material.opacity = THREE.MathUtils.lerp(w.material.opacity, targetOpacity, 0.05);
-                w.visible = w.material.opacity > 0.01;
-            });
+            wordsGroup.children.forEach(w => w.material.opacity = THREE.MathUtils.lerp(w.material.opacity, targetAlpha, 0.05));
+            photoGroup.children.forEach(p => p.material.opacity = THREE.MathUtils.lerp(p.material.opacity, targetAlpha, 0.05));
 
             renderer.render(scene, camera);
         }
         animate();
 
-        // Botón de Inicio
-        const audio = document.getElementById('backgroundAudio');
         btnStart.addEventListener('click', () => {
-            document.getElementById('loader-screen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('loader-screen').style.display = 'none';
-                audio.play();
-            }, 500);
+            document.getElementById('loader-screen').style.opacity = 0;
+            setTimeout(() => { document.getElementById('loader-screen').style.display = 'none'; document.getElementById('backgroundAudio').play(); }, 500);
         });
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        document.getElementById('volumeRange').addEventListener('input', (e) => document.getElementById('backgroundAudio').volume = e.target.value);
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
     </script>
 </body>
 </html>
