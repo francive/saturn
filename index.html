@@ -110,7 +110,6 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-        // GESTOR DE CARGA
         const loadingManager = new THREE.LoadingManager();
         const progressBar = document.getElementById('progress-bar');
         const btnStart = document.getElementById('btn-start');
@@ -133,7 +132,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const user = urlParams.get('user') || 'cliente_01'; 
 
-        // --- 1. LUCES (Ajustadas para no quemar el planeta) ---
+        // --- 1. LUCES ---
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
         scene.add(ambientLight);
 
@@ -162,7 +161,7 @@
         const starPoints = new THREE.Points(starGeo, starMat);
         scene.add(starPoints);
 
-        // --- 4. SATURNO (Material Ajustado) ---
+        // --- 4. SATURNO ---
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
             new THREE.MeshStandardMaterial({ 
@@ -173,12 +172,12 @@
         );
         scene.add(saturn);
 
-        // --- 5. ATMÓSFERA (Glow más fuerte) ---
+        // --- 5. ATMÓSFERA (Glow Amarillo Dorado) ---
         const atmosphereGeo = new THREE.SphereGeometry(1.27, 64, 64);
         const atmosphereMat = new THREE.MeshBasicMaterial({
-            color: 0xfffae6,
+            color: 0xffd700, // Dorado para el resplandor
             transparent: true,
-            opacity: 0.3,
+            opacity: 0.35, 
             side: THREE.BackSide
         });
         const atmosphereGlow = new THREE.Mesh(atmosphereGeo, atmosphereMat);
@@ -193,14 +192,14 @@
         scene.add(ringGroup);
         ringGroup.add(ringStars, wordsGroup, photoGroup);
 
-        // --- 6. ANILLOS (Corregidos para no cortar las estrellas) ---
+        // --- 6. ANILLOS (Difuminados y con Brillo) ---
         const ringMat = new THREE.MeshBasicMaterial({ 
             color: 0xffe066, 
             side: THREE.DoubleSide, 
             transparent: true, 
-            opacity: 0.6,
-            depthWrite: false, // Evita la "sombra negra" sobre el fondo
-            blending: THREE.AdditiveBlending 
+            opacity: 0.5, // Opacidad reducida para difuminado
+            depthWrite: false, 
+            blending: THREE.AdditiveBlending // Fundido brillante
         });
 
         const rings = [new THREE.RingGeometry(1.8, 3.2, 64), new THREE.RingGeometry(3.5, 4.8, 64)];
@@ -210,7 +209,7 @@
             ringGroup.add(mesh);
         });
 
-        // --- RESTO DE ELEMENTOS (Partículas, frases y fotos) ---
+        // --- RESTO DE ELEMENTOS ---
         const destelloTexture = textureLoader.load('./assets/textures/destello.png');
         for (let i = 0; i < 1000; i++) {
             const starMatRing = new THREE.SpriteMaterial({ 
