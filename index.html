@@ -133,63 +133,91 @@
         const urlParams = new URLSearchParams(window.location.search);
         const user = urlParams.get('user') || 'cliente_01'; 
 
-        // LUCES
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); 
+        // --- 1. LUCES (Standard necesita luces para brillar) ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); // Luz tenue para sombras
         scene.add(ambientLight);
 
-        // FONDO
-        const bgTexture = textureLoader.load('./assets/textures/estrellas.jpg'); 
-        const bgMaterial = new THREE.MeshBasicMaterial({ map: bgTexture, transparent: true, depthWrite: false });
-        const backgroundPlane = new THREE.Mesh(new THREE.PlaneGeometry(800, 480), bgMaterial);
-        scene.add(backgroundPlane);
+        const sideLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        sideLight.position.set(5, 3, 5); // Luz lateral para realismo
+        scene.add(sideLight);
 
+        // --- 2. RENDERIZADOR (Antialias Activado) ---
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
-        // SATURNO
+        // --- 3. FONDO DE ESTRELLAS DINÁMICO (BufferGeometry) ---
+        const starGeo = new THREE.BufferGeometry();
+        const starCoords = [];
+        for (let i = 0; i < 10000; i++) {
+            const x = (Math.random() - 0.5) * 2000;
+            const y = (Math.random() - 0.5) * 2000;
+            const z = (Math.random() - 0.5) * 2000;
+            starCoords.push(x, y, z);
+        }
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
+        const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7, transparent: true });
+        const starPoints = new THREE.Points(starGeo, starMat);
+        scene.add(starPoints);
+
+        // --- 4. SATURNO (MeshStandardMaterial) ---
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
-            new THREE.MeshBasicMaterial({ map: textureLoader.load('./assets/textures/saturno.jpg') })
+            new THREE.MeshStandardMaterial({ 
+                map: textureLoader.load('./assets/textures/saturno.jpg'),
+                roughness: 0.8,
+                metalness: 0.1
+            })
         );
         scene.add(saturn);
 
-        const atmosphereStars = new THREE.Group(); 
+        // --- 5. ATMÓSFERA (Glow) ---
+        const atmosphereGeo = new THREE.SphereGeometry(1.25, 64, 64);
+        const atmosphereMat = new THREE.MeshBasicMaterial({
+            color: 0xfffae6,
+            transparent: true,
+            opacity: 0.15,
+            side: THREE.BackSide
+        });
+        const atmosphereGlow = new THREE.Mesh(atmosphereGeo, atmosphereMat);
+        scene.add(atmosphereGlow);
+
         const ringGroup = new THREE.Group();        
         const ringStars = new THREE.Group();        
         const wordsGroup = new THREE.Group();      
         const photoGroup = new THREE.Group(); 
         
         ringGroup.rotation.x = Math.PI * 0.15;
-        scene.add(atmosphereStars, ringGroup);
-        // AQUÍ ESTABA EL ERROR: Añadimos todo al ringGroup
+        scene.add(ringGroup);
         ringGroup.add(ringStars, wordsGroup, photoGroup);
 
+        // --- 6. ANILLOS REALISTAS (AlphaMap) ---
+        const ringAlpha = textureLoader.load('./assets/textures/anillos_alpha.png'); // Si no tienes este archivo, puedes usar los mismos anillos con side: DoubleSide
+        const ringMat = new THREE.MeshStandardMaterial({ 
+            color: 0xffe066, 
+            side: THREE.DoubleSide, 
+            transparent: true, 
+            opacity: 0.7,
+            alphaMap: ringAlpha, // Crea huecos realistas
+            roughness: 0.5
+        });
+
+        const rings = [new THREE.RingGeometry(1.8, 3.2, 64), new THREE.RingGeometry(3.5, 4.8, 64)];
+        rings.forEach(geo => {
+            const mesh = new THREE.Mesh(geo, ringMat);
+            mesh.rotation.x = Math.PI / 2;
+            ringGroup.add(mesh);
+        });
+
+        // (Resto del código de frases y fotos se mantiene igual por su funcionalidad)
         const destelloTexture = textureLoader.load('./assets/textures/destello.png');
-
-        // ESTRELLAS DEL DOMO
-        for (let i = 0; i < 1500; i++) {
-            const starMat = new THREE.SpriteMaterial({ 
-                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: Math.random() * 0.6 + 0.2
-            });
-            const star = new THREE.Sprite(starMat);
-            const r = 12 + Math.random() * 8; 
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos((Math.random() * 2) - 1);
-            star.position.set(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
-            const s = Math.random() * 0.4 + 0.15; 
-            star.scale.set(s, s, 1);
-            atmosphereStars.add(star);
-        }
-
-        // ESTRELLAS DE LOS ANILLOS
         for (let i = 0; i < 1000; i++) {
-            const starMat = new THREE.SpriteMaterial({ 
+            const starMatRing = new THREE.SpriteMaterial({ 
                 map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 
             });
-            const star = new THREE.Sprite(starMat);
+            const star = new THREE.Sprite(starMatRing);
             const angle = Math.random() * Math.PI * 2;
             const radius = 1.8 + Math.random() * 3.5; 
             star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
@@ -198,28 +226,15 @@
             ringStars.add(star);
         }
 
-        const ringMat = new THREE.MeshBasicMaterial({ 
-            color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false
-        });
-        const rings = [new THREE.RingGeometry(1.8, 3.2, 64), new THREE.RingGeometry(3.5, 4.8, 64)];
-        rings.forEach(geo => {
-            const mesh = new THREE.Mesh(geo, ringMat);
-            mesh.rotation.x = Math.PI / 2;
-            ringGroup.add(mesh);
-        });
-
-        // FRASES
         const loveWords = ["Te amo", "✨ Eres muy especial ✨", "Flores amarillas", "Nuestro Amor", "Te adoro", "Siempre brillas", "Flores para ti", "Infinito"];
         for(let i = 0; i < 100; i++) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = 256; canvas.height = 64;
             ctx.font = '32px Georgia'; ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.fillText(loveWords[i % loveWords.length], 128, 40);
-
             const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
                 map: new THREE.CanvasTexture(canvas), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0
             }));
-
             const angle = Math.random() * Math.PI * 2;
             const radius = 2.0 + Math.random() * 3.0; 
             wordSprite.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
@@ -228,7 +243,6 @@
             wordsGroup.add(wordSprite);
         }
 
-        // CARGA DINÁMICA DE FOTOS
         function cargarSiguienteFoto(index) {
             const ruta = `./assets/photos/${user}/foto (${index}).jpg`;
             textureLoader.load(
@@ -239,11 +253,9 @@
                     const photoSprite = new THREE.Sprite(photoMat);
                     if (aspect > 1) photoSprite.scale.set(0.6 * aspect, 0.6, 1); 
                     else photoSprite.scale.set(0.5, 0.5 / aspect, 1);
-
                     const angle = Math.random() * Math.PI * 2;
                     const radius = 2.0 + Math.random() * 2.8; 
                     photoSprite.position.set(Math.cos(angle) * radius, 0.3, Math.sin(angle) * radius);
-                    
                     photoSprite.visible = false;
                     photoGroup.add(photoSprite);
                     cargarSiguienteFoto(index + 1);
@@ -254,7 +266,6 @@
         }
         cargarSiguienteFoto(1);
 
-        // MANEJO DE AUDIO E INICIO
         const audio = document.getElementById('backgroundAudio');
         btnStart.addEventListener('click', () => {
             document.getElementById('loader-screen').style.opacity = '0';
@@ -276,16 +287,10 @@
 
             saturn.rotation.y += 0.001;
             ringGroup.rotation.y += 0.0005; 
-            atmosphereStars.rotation.y += 0.0001; 
-
-            atmosphereStars.children.forEach((s, i) => {
-                if (i % 30 === 0) s.material.opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.001 + i) * 0.4);
-            });
-
-            const vector = new THREE.Vector3(0, 0, -150); 
-            vector.applyQuaternion(camera.quaternion);
-            backgroundPlane.position.copy(camera.position).add(vector);
-            backgroundPlane.quaternion.copy(camera.quaternion);
+            
+            // Parpadeo de estrellas de fondo
+            starPoints.rotation.y += 0.0002;
+            starMat.opacity = 0.7 + Math.sin(Date.now() * 0.001) * 0.3;
 
             const dist = camera.position.distanceTo(scene.position);
             const isNear = dist < 9; 
