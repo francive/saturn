@@ -2,11 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Un Universo Inmersivo para Ti - Francis Designs</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
 
+        /* Pantalla de Carga Responsiva */
         #loader-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; display: flex; flex-direction: column;
@@ -14,29 +16,42 @@
             transition: opacity 0.5s ease;
         }
 
-        #saturn-logo { width: 120px; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
+        /* Ajuste de escala para el logo en móviles */
+        #saturn-logo { 
+            width: 40vw; 
+            max-width: 150px; 
+            margin-bottom: 20px; 
+            animation: float 3s ease-in-out infinite; 
+        }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
 
-        #progress-container { width: 250px; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; overflow: hidden; margin-bottom: 20px; }
+        /* Barra de progreso ajustada */
+        #progress-container { width: 70%; max-width: 250px; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; overflow: hidden; margin-bottom: 20px; }
         #progress-bar { width: 0%; height: 100%; background: #ffcc00; transition: width 0.3s; }
 
         #btn-start {
-            display: none; padding: 12px 30px; background: #ffcc00; color: #000;
-            border: none; border-radius: 25px; font-weight: bold; cursor: pointer;
-            text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+            display: none; padding: 15px 35px; background: #ffcc00; color: #000;
+            border: none; border-radius: 30px; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 1px; font-size: 14px;
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
         }
 
+        /* Contenedor de audio más discreto para celular */
         #audio-container {
-            position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.1);
-            padding: 10px; border-radius: 8px; backdrop-filter: blur(5px); color: white;
-            z-index: 100; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255, 255, 255, 0.2);
+            position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.6);
+            padding: 8px 12px; border-radius: 20px; backdrop-filter: blur(5px); color: white;
+            z-index: 100; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 12px;
         }
+        #volumeRange { width: 60px; cursor: pointer; }
 
+        /* Toast corregido: No se corta y se adapta al texto */
         #language-toast {
-            position: fixed; bottom: 10%; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 204, 0, 0.9); color: #000; padding: 12px 25px;
-            border-radius: 30px; font-weight: bold; display: none; z-index: 2000;
-            box-shadow: 0 0 20px rgba(255, 204, 0, 0.4); pointer-events: none;
+            position: fixed; bottom: 15%; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 204, 0, 0.95); color: #000; padding: 15px 25px;
+            border-radius: 20px; font-weight: bold; display: none; z-index: 2000;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5); pointer-events: none;
+            text-align: center; max-width: 85vw; line-height: 1.4;
         }
     </style>
 </head>
@@ -76,6 +91,8 @@
         const progressBar = document.getElementById('progress-bar');
         const btnStart = document.getElementById('btn-start');
         const toast = document.getElementById('language-toast');
+        const volumeRange = document.getElementById('volumeRange');
+        const audio = document.getElementById('backgroundAudio');
 
         loadingManager.onProgress = (url, loaded, total) => { progressBar.style.width = (loaded / total * 100) + '%'; };
         loadingManager.onLoad = () => { btnStart.style.display = 'block'; document.getElementById('progress-container').style.display = 'none'; };
@@ -91,13 +108,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const user = urlParams.get('user') || 'cliente_01';
 
-        // --- LUCES (RESTAURADAS) ---
         scene.add(new THREE.AmbientLight(0xffffff, 0.5));
         const sideLight = new THREE.DirectionalLight(0xffffff, 0.9);
         sideLight.position.set(5, 3, 5);
         scene.add(sideLight);
 
-        // --- FONDO DE ESTRELLAS ---
         const starGeo = new THREE.BufferGeometry();
         const starCoords = [];
         for (let i = 0; i < 12000; i++) {
@@ -107,7 +122,6 @@
         const starPoints = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.7, transparent: true }));
         scene.add(starPoints);
 
-        // --- SATURNO ---
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
             new THREE.MeshStandardMaterial({ 
@@ -118,7 +132,6 @@
         );
         scene.add(saturn);
 
-        // --- ATMÓSFERA (BRILLO DORADO RESTAURADO) ---
         const atmosphereGlow = new THREE.Mesh(
             new THREE.SphereGeometry(1.27, 64, 64),
             new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.3, side: THREE.BackSide })
@@ -134,7 +147,6 @@
         const photoGroup = new THREE.Group();
         ringGroup.add(ringStars, wordsGroup, photoGroup);
 
-        // --- ANILLOS (DIFUMINADO BRILLANTE) ---
         const ringMat = new THREE.MeshBasicMaterial({ 
             color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.5, 
             depthWrite: false, blending: THREE.AdditiveBlending 
@@ -145,7 +157,6 @@
             ringGroup.add(mesh);
         });
 
-        // --- ESTRELLAS DESTELLANTES ---
         const destelloTexture = textureLoader.load('./assets/textures/destello.png');
         for (let i = 0; i < 1000; i++) {
             const star = new THREE.Sprite(new THREE.SpriteMaterial({ 
@@ -159,20 +170,19 @@
             ringStars.add(star);
         }
 
-        // --- 100 FRASES ÚNICAS ---
         const rawIdiomas = [
             "Español—Te amo", "Inglés—I love you", "Francés—Je t’aime", "Italiano—Ti amo", "Alemán—Ich liebe dich",
             "Portugués—Eu te amo", "Ruso—Я тебя люблю", "Japonés—愛してる", "Coreano—사랑해", "Chino—我爱你",
             "Árabe—أحبك", "Hindi—प्यार करता हूँ", "Turco—Seni seviyorum", "Griego—Σ' αγαπώ", "Holandés—Ik hou van jou",
             "Sueco—Jag älskar dig", "Polaco—Kocham cię", "Checo—Miluji tě", "Húngaro—Szeretlek", "Rumano—Te iubesc",
-            "Finlandés—Rakastan sinua", "Hebreo—אני אוהב אותך", "Filipino—Mahal kita", "Indonesio—Aku cinta kamu",
+            "Finlandés—Rakastan sinua", "Hebreo—אני אוהบ אותך", "Filipino—Mahal kita", "Indonesio—Aku cinta kamu",
             "Swahili—Nakupenda", "Ucraniano—Я тебе кохаю", "Catalán—T’estimo", "Euskera—Maite zaitut", "Quechua—Kuyayki",
             "Guaraní—Rohayhu", "Náhuatl—Nimitztlazohtla", "Maya—In k’áatech", "Latín—Te amo", "Esperanto—Mi amas vin",
             "Danés—Jeg elsker dig", "Noruego—Jeg elsker deg", "Eslovaco—Ľúbim ťa", "Serbio—Волим те", "Croata—Volim te",
             "Bosnio—Volim te", "Islandés—Ég elska þig", "Maltés—Inħobbok", "Malayo—Saya cinta padamu", "Zulú—Ngiyakuthanda",
             "Xhosa—Ndiyakuthanda", "Yoruba—Mo nifẹ rẹ", "Amárico—እወድሃለሁ", "Somali—Waan ku jeclahay", "Nepalí—म तिमीलाई माया गर्छु",
             "Punjabi—ਮੈਂ ਤੈਨੂੰ ਪਿਆਰ ਕਰਦਾ ਹਾਂ", "Urdu—میں تم سے پیار کرتا ہوں", "Persa—دوستت دارم", "Kurdo—Ez hej te dikim",
-            "Georgiano—მიყვარხარ", "Armenio—Ես սիրում եម քեզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
+            "Georgiano—მიყვარხار", "Armenio—Ես սիրում եմ քեզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
             "Lituano—Aš tave myliu", "Bielorruso—Я цябе кахаю", "Gallego—Quérote", "Aymara—Mä munta", "Cebuano—Gihigugma tika",
             "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་དུང་ཡོད།",
             "Hawaiano—Aloha wau iā ‘oe", "Samoano—Ou te alofa ia te oe", "Maorí—Aroha atu au ki a koe", "Fiyiano—Au domoni iko", "Tonga—‘Ofa atu",
@@ -196,18 +206,16 @@
             }));
             
             const angle = (i / rawIdiomas.length) * Math.PI * 2;
-            const radius = 2.2 + (i % 3) * 0.7; // Distribución en 3 capas
+            const radius = 2.2 + (i % 3) * 0.7; 
             wordSprite.position.set(Math.cos(angle) * radius, (i % 2 === 0 ? 0.2 : -0.2), Math.sin(angle) * radius);
             wordSprite.scale.set(0.6, 0.15, 1);
             wordSprite.userData = { idioma: data[0] };
             wordsGroup.add(wordSprite);
         }
 
-        // --- CARGA DE FOTOS (COLORES REALES) ---
         function cargarSiguienteFoto(index) {
             textureLoader.load(`./assets/photos/${user}/foto (${index}).jpg`, (texture) => {
                 const aspect = texture.image.width / texture.image.height;
-                // Usamos NormalBlending para que las fotos no se quemen a blanco
                 const photoSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false }));
                 photoSprite.scale.set(0.6 * (aspect > 1 ? aspect : 1), 0.6 / (aspect < 1 ? aspect : 1), 1);
                 const angle = Math.random() * Math.PI * 2;
@@ -219,25 +227,39 @@
         }
         cargarSiguienteFoto(1);
 
-        // --- INTERACCIÓN ---
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
-        window.addEventListener('click', (e) => {
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+        // Soporte mejorado para clics y toques táctiles
+        const handleInteraction = (e) => {
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            
             raycaster.setFromCamera(mouse, camera);
             const hits = raycaster.intersectObjects(wordsGroup.children);
+            
             if (hits.length > 0) {
-                toast.innerText = `Así se dice "Te amo" en ${hits[0].object.userData.idioma}`;
+                toast.innerHTML = `Así se dice "Te amo" en<br><span style="font-size: 1.1em; color: #333;">${hits[0].object.userData.idioma}</span>`;
                 toast.style.display = 'block';
-                setTimeout(() => toast.style.display = 'none', 3000);
+                if(window.toastTimeout) clearTimeout(window.toastTimeout);
+                window.toastTimeout = setTimeout(() => toast.style.display = 'none', 3500);
             }
-        });
+        };
 
-        const audio = document.getElementById('backgroundAudio');
+        window.addEventListener('click', handleInteraction);
+        window.addEventListener('touchstart', handleInteraction);
+
+        volumeRange.addEventListener('input', () => { audio.volume = volumeRange.value; });
+
         btnStart.addEventListener('click', () => {
             document.getElementById('loader-screen').style.opacity = '0';
-            setTimeout(() => { document.getElementById('loader-screen').style.display = 'none'; audio.play(); }, 500);
+            setTimeout(() => { 
+                document.getElementById('loader-screen').style.display = 'none'; 
+                audio.play().catch(() => console.log("Interacción requerida para audio"));
+            }, 500);
         });
 
         camera.position.set(0, 5, 12);
