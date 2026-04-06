@@ -2,31 +2,39 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Universo Inmersivo - Francis Designs</title>
+    <title>Un Universo Inmersivo para Ti - Francis Designs</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
+
         #loader-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 1000;
             transition: opacity 0.5s ease;
         }
-        #progress-container { width: 250px; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; margin-top: 20px; }
+
+        #saturn-logo { width: 120px; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+
+        #progress-container { width: 250px; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; overflow: hidden; margin-bottom: 20px; }
         #progress-bar { width: 0%; height: 100%; background: #ffcc00; transition: width 0.3s; }
+
         #btn-start {
             display: none; padding: 12px 30px; background: #ffcc00; color: #000;
             border: none; border-radius: 25px; font-weight: bold; cursor: pointer;
-            text-transform: uppercase; letter-spacing: 1px; margin-top: 20px;
+            text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
         }
+
         #audio-container {
-            position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.5);
-            padding: 10px; border-radius: 8px; color: white; z-index: 100;
-            display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.2);
+            position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.1);
+            padding: 10px; border-radius: 8px; backdrop-filter: blur(5px); color: white;
+            z-index: 100; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255, 255, 255, 0.2);
         }
+
         #language-toast {
             position: fixed; bottom: 10%; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 204, 0, 0.95); color: #000; padding: 12px 25px;
+            background: rgba(255, 204, 0, 0.9); color: #000; padding: 12px 25px;
             border-radius: 30px; font-weight: bold; display: none; z-index: 2000;
             box-shadow: 0 0 20px rgba(255, 204, 0, 0.4); pointer-events: none;
         }
@@ -35,6 +43,7 @@
 <body>
 
     <div id="loader-screen">
+        <img id="saturn-logo" src="assets/textures/saturn_icon.png" alt="Logo">
         <div id="progress-container"><div id="progress-bar"></div></div>
         <button id="btn-start">Comenzar Experiencia</button>
     </div>
@@ -42,7 +51,7 @@
     <div id="language-toast"></div>
 
     <div id="audio-container">
-        <label>Volumen</label>
+        <label for="volumeRange">Volumen</label>
         <input type="range" id="volumeRange" min="0" max="1" step="0.1" value="0.5">
     </div>
 
@@ -72,32 +81,30 @@
         loadingManager.onLoad = () => { btnStart.style.display = 'block'; document.getElementById('progress-container').style.display = 'none'; };
 
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 4000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.outputEncoding = THREE.sRGBEncoding; // Mejora el color
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
         const textureLoader = new THREE.TextureLoader(loadingManager);
         const urlParams = new URLSearchParams(window.location.search);
         const user = urlParams.get('user') || 'cliente_01';
 
-        // --- LUCES (AJUSTADAS PARA EVITAR BLANCO) ---
-        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        sunLight.position.set(5, 5, 5);
-        scene.add(sunLight);
+        // --- LUCES (RESTAURADAS) ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const sideLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        sideLight.position.set(5, 3, 5);
+        scene.add(sideLight);
 
         // --- FONDO DE ESTRELLAS ---
         const starGeo = new THREE.BufferGeometry();
         const starCoords = [];
-        for (let i = 0; i < 15000; i++) {
-            starCoords.push((Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000);
+        for (let i = 0; i < 12000; i++) {
+            starCoords.push((Math.random() - 0.5) * 2500, (Math.random() - 0.5) * 2500, (Math.random() - 0.5) * 2500);
         }
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-        const starPoints = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xaaaaaa, size: 0.7, transparent: true }));
+        const starPoints = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.7, transparent: true }));
         scene.add(starPoints);
 
         // --- SATURNO ---
@@ -105,59 +112,54 @@
             new THREE.SphereGeometry(1.2, 64, 64),
             new THREE.MeshStandardMaterial({ 
                 map: textureLoader.load('./assets/textures/saturno.jpg'),
-                roughness: 1, // Evita reflejos blancos exagerados
-                metalness: 0
+                roughness: 0.8,
+                metalness: 0.2
             })
         );
         scene.add(saturn);
 
-        const atmosphere = new THREE.Mesh(
-            new THREE.SphereGeometry(1.22, 64, 64),
-            new THREE.MeshBasicMaterial({ color: 0xffcc00, transparent: true, opacity: 0.1, side: THREE.BackSide })
+        // --- ATMÓSFERA (BRILLO DORADO RESTAURADO) ---
+        const atmosphereGlow = new THREE.Mesh(
+            new THREE.SphereGeometry(1.27, 64, 64),
+            new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.3, side: THREE.BackSide })
         );
-        scene.add(atmosphere);
+        scene.add(atmosphereGlow);
 
-        const mainRingGroup = new THREE.Group();
-        mainRingGroup.rotation.x = Math.PI * 0.15;
-        scene.add(mainRingGroup);
+        const ringGroup = new THREE.Group();
+        ringGroup.rotation.x = Math.PI * 0.15;
+        scene.add(ringGroup);
 
         const ringStars = new THREE.Group();
         const wordsGroup = new THREE.Group();
         const photoGroup = new THREE.Group();
-        mainRingGroup.add(ringStars, wordsGroup, photoGroup);
+        ringGroup.add(ringStars, wordsGroup, photoGroup);
 
-        // --- ANILLOS VISUALES (SIN MANCHAS NEGRAS) ---
-        const ringMat = new THREE.MeshStandardMaterial({ 
-            color: 0xffcc00, 
-            side: THREE.DoubleSide, 
-            transparent: true, 
-            opacity: 0.4, 
-            blending: THREE.AdditiveBlending,
-            depthWrite: false // CRITICAL: Elimina las manchas negras
+        // --- ANILLOS (DIFUMINADO BRILLANTE) ---
+        const ringMat = new THREE.MeshBasicMaterial({ 
+            color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.5, 
+            depthWrite: false, blending: THREE.AdditiveBlending 
         });
-        const ring1 = new THREE.Mesh(new THREE.RingGeometry(1.8, 3.2, 128), ringMat);
-        const ring2 = new THREE.Mesh(new THREE.RingGeometry(3.5, 4.8, 128), ringMat);
-        ring1.rotation.x = ring2.rotation.x = Math.PI / 2;
-        mainRingGroup.add(ring1, ring2);
+        [new THREE.RingGeometry(1.8, 3.2, 64), new THREE.RingGeometry(3.5, 4.8, 64)].forEach(geo => {
+            const mesh = new THREE.Mesh(geo, ringMat);
+            mesh.rotation.x = Math.PI / 2;
+            ringGroup.add(mesh);
+        });
 
-        // --- ESTRELLAS DEL ANILLO ---
-        const destelloTex = textureLoader.load('./assets/textures/destello.png');
+        // --- ESTRELLAS DESTELLANTES ---
+        const destelloTexture = textureLoader.load('./assets/textures/destello.png');
         for (let i = 0; i < 1000; i++) {
-            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
-                map: destelloTex, 
-                transparent: true, 
-                blending: THREE.AdditiveBlending, 
-                opacity: 0.8,
-                depthWrite: false 
+            const star = new THREE.Sprite(new THREE.SpriteMaterial({ 
+                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 
             }));
             const angle = Math.random() * Math.PI * 2;
-            const radius = 1.8 + Math.random() * 3.0;
-            sprite.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
-            sprite.scale.set(0.15, 0.15, 1);
-            ringStars.add(sprite);
+            const radius = 1.8 + Math.random() * 3.5;
+            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
+            const s = Math.random() * 0.2 + 0.05;
+            star.scale.set(s, s, 1);
+            ringStars.add(star);
         }
 
-        // --- 100 IDIOMAS ÚNICOS ---
+        // --- 100 FRASES ÚNICAS ---
         const rawIdiomas = [
             "Español—Te amo", "Inglés—I love you", "Francés—Je t’aime", "Italiano—Ti amo", "Alemán—Ich liebe dich",
             "Portugués—Eu te amo", "Ruso—Я тебя люблю", "Japonés—愛してる", "Coreano—사랑해", "Chino—我爱你",
@@ -170,9 +172,9 @@
             "Bosnio—Volim te", "Islandés—Ég elska þig", "Maltés—Inħobbok", "Malayo—Saya cinta padamu", "Zulú—Ngiyakuthanda",
             "Xhosa—Ndiyakuthanda", "Yoruba—Mo nifẹ rẹ", "Amárico—እወድሃለሁ", "Somali—Waan ku jeclahay", "Nepalí—म तिमीलाई माया गर्छु",
             "Punjabi—ਮੈਂ ਤੈਨੂੰ ਪਿਆਰ ਕਰਦਾ ਹਾਂ", "Urdu—میں تم سے پیار کرتا ہوں", "Persa—دوستت دارم", "Kurdo—Ez hej te dikim",
-            "Georgiano—მიყვარხար", "Armenio—Ես սիրում եմ քեզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
+            "Georgiano—მიყვარხარ", "Armenio—Ես սիրում եម քեզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
             "Lituano—Aš tave myliu", "Bielorruso—Я цябе кахаю", "Gallego—Quérote", "Aymara—Mä munta", "Cebuano—Gihigugma tika",
-            "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་ဒུང་ཡོད།",
+            "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་དུང་ཡོད།",
             "Hawaiano—Aloha wau iā ‘oe", "Samoano—Ou te alofa ia te oe", "Maorí—Aroha atu au ki a koe", "Fiyiano—Au domoni iko", "Tonga—‘Ofa atu",
             "Lingala—Nalingi yo", "Hausa—Ina son ka", "Igbo—A hụrụ m gị n’anya", "Malgache—Tiako ianao", "Tártaro—Мин сине яратам",
             "Kazajo—Мен сені жақсы көремін", "Uzbek—Men seni sevaman", "Tayiko—Ман туро дӯст медорам", "Sinhala—මම ඔයාට ආදරෙයි", "Haitiano—Mwen renmen ou",
@@ -181,43 +183,43 @@
             "Télugu—నేను నిన్ను ప్రేమిస్తున్నాను", "Tamil—நான் உன்னை காதலிக்கிறேன்", "Vietnamita—Tôi yêu bạn", "Tailandés—ฉันรักคุณ", "Albanés—Të dua"
         ];
 
-        for (let i = 0; i < rawIdiomas.length; i++) {
+        for(let i = 0; i < rawIdiomas.length; i++) {
             const data = rawIdiomas[i].split('—');
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 512; canvas.height = 128;
-            ctx.font = 'bold 38px sans-serif'; ctx.fillStyle = 'white'; ctx.textAlign = 'center';
-            ctx.fillText(data[1], 256, 80);
+            canvas.width = 320; canvas.height = 80;
+            ctx.font = 'bold 30px Georgia'; ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; 
+            ctx.fillText(data[1], 160, 50);
 
-            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
-                map: new THREE.CanvasTexture(canvas), 
-                transparent: true, 
-                opacity: 0,
-                depthWrite: false 
+            const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
+                map: new THREE.CanvasTexture(canvas), transparent: true, opacity: 0, depthWrite: false
             }));
             
             const angle = (i / rawIdiomas.length) * Math.PI * 2;
-            const radius = 2.3 + (i % 4) * 0.6; // 4 niveles para separar clics
-            sprite.position.set(Math.cos(angle) * radius, (i % 2 === 0 ? 0.2 : -0.2), Math.sin(angle) * radius);
-            sprite.scale.set(0.7, 0.18, 1);
-            sprite.userData = { idioma: data[0] };
-            wordsGroup.add(sprite);
+            const radius = 2.2 + (i % 3) * 0.7; // Distribución en 3 capas
+            wordSprite.position.set(Math.cos(angle) * radius, (i % 2 === 0 ? 0.2 : -0.2), Math.sin(angle) * radius);
+            wordSprite.scale.set(0.6, 0.15, 1);
+            wordSprite.userData = { idioma: data[0] };
+            wordsGroup.add(wordSprite);
         }
 
-        function loadPhotos(idx) {
-            textureLoader.load(`./assets/photos/${user}/foto (${idx}).jpg`, (tex) => {
-                const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false }));
-                const aspect = tex.image.width / tex.image.height;
-                sprite.scale.set(0.5 * aspect, 0.5, 1);
+        // --- CARGA DE FOTOS (COLORES REALES) ---
+        function cargarSiguienteFoto(index) {
+            textureLoader.load(`./assets/photos/${user}/foto (${index}).jpg`, (texture) => {
+                const aspect = texture.image.width / texture.image.height;
+                // Usamos NormalBlending para que las fotos no se quemen a blanco
+                const photoSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false }));
+                photoSprite.scale.set(0.6 * (aspect > 1 ? aspect : 1), 0.6 / (aspect < 1 ? aspect : 1), 1);
                 const angle = Math.random() * Math.PI * 2;
-                const radius = 2.6 + Math.random() * 1.8;
-                sprite.position.set(Math.cos(angle) * radius, 0.4, Math.sin(angle) * radius);
-                photoGroup.add(sprite);
-                if(idx < 60) loadPhotos(idx + 1);
-            }, undefined, () => console.log("Finalizado"));
+                const radius = 2.5 + Math.random() * 1.5;
+                photoSprite.position.set(Math.cos(angle) * radius, 0.4, Math.sin(angle) * radius);
+                photoGroup.add(photoSprite);
+                cargarSiguienteFoto(index + 1);
+            }, undefined, () => console.log("Fotos listas"));
         }
-        loadPhotos(1);
+        cargarSiguienteFoto(1);
 
+        // --- INTERACCIÓN ---
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         window.addEventListener('click', (e) => {
@@ -232,6 +234,12 @@
             }
         });
 
+        const audio = document.getElementById('backgroundAudio');
+        btnStart.addEventListener('click', () => {
+            document.getElementById('loader-screen').style.opacity = '0';
+            setTimeout(() => { document.getElementById('loader-screen').style.display = 'none'; audio.play(); }, 500);
+        });
+
         camera.position.set(0, 5, 12);
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
@@ -240,24 +248,24 @@
             requestAnimationFrame(animate);
             controls.update();
             saturn.rotation.y += 0.001;
-            mainRingGroup.rotation.y += 0.0006;
-            
-            const dist = camera.position.distanceTo(scene.position);
-            const targetAlpha = dist < 11 ? 1 : 0;
+            ringGroup.rotation.y += 0.0004;
+            starPoints.rotation.y += 0.0001;
 
-            wordsGroup.children.forEach(w => w.material.opacity = THREE.MathUtils.lerp(w.material.opacity, targetAlpha, 0.05));
-            photoGroup.children.forEach(p => p.material.opacity = THREE.MathUtils.lerp(p.material.opacity, targetAlpha, 0.05));
+            const isNear = camera.position.distanceTo(scene.position) < 10;
+            const targetOpacity = isNear ? 1 : 0;
+
+            wordsGroup.children.forEach(w => w.material.opacity = THREE.MathUtils.lerp(w.material.opacity, targetOpacity, 0.05));
+            photoGroup.children.forEach(p => p.material.opacity = THREE.MathUtils.lerp(p.material.opacity, targetOpacity, 0.05));
 
             renderer.render(scene, camera);
         }
         animate();
 
-        btnStart.addEventListener('click', () => {
-            document.getElementById('loader-screen').style.opacity = 0;
-            setTimeout(() => { document.getElementById('loader-screen').style.display = 'none'; document.getElementById('backgroundAudio').play(); }, 500);
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
-        document.getElementById('volumeRange').addEventListener('input', (e) => document.getElementById('backgroundAudio').volume = e.target.value);
-        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
     </script>
 </body>
 </html>
