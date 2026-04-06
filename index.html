@@ -35,8 +35,9 @@
     </audio>
 
     <script type="module">
+        // ARREGLO DE IMPORTACIÓN: Usamos unpkg para evitar bloqueos de CORS en GitHub
         import * as THREE from 'https://unpkg.com/three@0.136.0/build/three.module.js';
-        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
+        import { OrbitControls } from 'https://unpkg.com/three@0.136.0/examples/jsm/controls/OrbitControls.js';
 
         const scene = new THREE.Scene();
         const textureLoader = new THREE.TextureLoader();
@@ -143,7 +144,8 @@
 
         // --- CARGA DINÁMICA DE FOTOS CON AUTO-DETECCIÓN ---
         function cargarSiguienteFoto(index) {
-            const ruta = `assets/photos/${user}/foto (${index}).jpg`;
+            // ARREGLO DE RUTA: Ruta relativa para mejor compatibilidad con GitHub
+            const ruta = `./assets/photos/${user}/foto (${index}).jpg`;
             
             textureLoader.load(
                 ruta, 
@@ -171,8 +173,8 @@
                 },
                 undefined,
                 (err) => {
-                    // Se detiene automáticamente cuando no encuentra más fotos
-                    console.log(`Detección finalizada para ${user}.`);
+                    // Se detiene automáticamente cuando no encuentra más fotos en la carpeta
+                    console.log(`Detección finalizada para ${user}. Total cargado.`);
                 }
             );
         }
