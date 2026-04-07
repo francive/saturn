@@ -8,6 +8,7 @@
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
 
+        /* PANTALLA DE CARGA */
         #loader-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; display: flex; flex-direction: column;
@@ -46,6 +47,10 @@
 
     <div id="language-toast"></div>
 
+    <audio id="backgroundAudio" loop>
+        <source src="assets/audio/saturnaudio.MP3" type="audio/mpeg">
+    </audio>
+
     <script type="importmap">
         {
             "imports": {
@@ -63,6 +68,7 @@
         const progressBar = document.getElementById('progress-bar');
         const btnStart = document.getElementById('btn-start');
         const toast = document.getElementById('language-toast');
+        const audio = document.getElementById('backgroundAudio'); // Referencia al audio
 
         loadingManager.onProgress = (url, loaded, total) => { progressBar.style.width = (loaded / total * 100) + '%'; };
         loadingManager.onLoad = () => { btnStart.style.display = 'block'; document.getElementById('progress-container').style.display = 'none'; };
@@ -145,20 +151,18 @@
         const particleCount = 18000;
         const particlePos = [];
         for (let i = 0; i < particleCount; i++) {
-            const theta = Math.random() * Math.PI * 2; // Ángulo horizontal
-            const phi = Math.acos((Math.random() * 2) - 1); // Ángulo vertical para esfera
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos((Math.random() * 2) - 1);
             
             const isNearPlanet = Math.random() > 0.5;
             let radius, x, y, z;
 
             if (isNearPlanet) {
-                // Envuelve el planeta siguiendo una forma de "escudo" o nave alienígena (elipsoide)
                 radius = 1.3 + Math.random() * 0.4;
                 x = radius * Math.sin(phi) * Math.cos(theta);
-                y = (radius * 0.7) * Math.cos(phi); // Aplastamos un poco el eje Y para la forma de nave
+                y = (radius * 0.7) * Math.cos(phi);
                 z = radius * Math.sin(phi) * Math.sin(theta);
             } else {
-                // Partículas en el disco de los anillos
                 const r = 1.8 + Math.random() * 4.0;
                 x = Math.cos(theta) * r;
                 y = (Math.random() - 0.5) * 0.15;
@@ -179,6 +183,7 @@
         const stellarDust = new THREE.Points(particleGeo, particleMat);
         ringGroup.add(stellarDust);
 
+        // --- ARREGLO DE LETRAS: ESPIRAL ORDENADA Y VISIBLE ---
         const rawIdiomas = [
             "Español—Te amo", "Inglés—I love you", "Francés—Je t’aime", "Italiano—Ti amo", "Alemán—Ich liebe dich",
             "Portugués—Eu te amo", "Ruso—Я тебя люблю", "Japonés—愛してる", "Coreano—사랑해", "Chino—我爱你",
@@ -189,11 +194,11 @@
             "Guaraní—Rohayhu", "Náhuatl—Nimitztlazohtla", "Maya—In k’áatech", "Latín—Te amo", "Esperanto—Mi amas vin",
             "Danés—Jeg elsker dig", "Noruego—Jeg elsker deg", "Eslovaco—Ľúbim ťa", "Serbio—Волим те", "Croata—Volim te",
             "Bosnio—Volim te", "Islandés—Ég elska þig", "Maltés—Inħobbok", "Malayo—Saya cinta padamu", "Zulú—Ngiyakuthanda",
-            "Xhosa—Ndiyakuthanda", "Yoruba—Mo nifẹ rẹ", "Amárico—እወድሃለሁ", "Somali—Waan ku jeclahay", "Nepalí—म तिमीलाई माया गर्छु",
+            "Xhosa—Ndiyakuthanda", "Yoruba—Mo nifẹ rẹ", "Amárico—እወድሃለሁ", "Somali—Waan ku jeclahay", "Nepalí—म तिમીलाई माया गर्छु",
             "Punjabi—ਮੈਂ ਤૈਨੂੰ ਪਿਆਰ ਕਰਦਾ ਹਾਂ", "Urdu—میں تم سے پیار کرتا ہوں", "Persa—دوستت دارم", "Kurdo—Ez hej te dikim",
-            "Georgiano—მიყვარხარ", "Armenio—Ես սիրում եម քեզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
+            "Georgiano—მიყვარხარ", "Armenio—Ես սիրում եմ քեզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
             "Lituano—Aš tave myliu", "Bielorruso—Я цябе кахаю", "Gallego—Quérote", "Aymara—Mä munta", "Cebuano—Gihigugma tika",
-            "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་དུང་ཡོད།",
+            "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་དུང་ಯོད།",
             "Hawaiano—Aloha wau iā ‘oe", "Samoano—Ou te alofa ia te oe", "Maorí—Aroha atu au ki a koe", "Fiyiano—Au domoni iko", "Tonga—‘Ofa atu",
             "Lingala—Nalingi yo", "Hausa—Ina son ka", "Igbo—A hụrụ m gị n’anya", "Malgache—Tiako ianao", "Tártaro—Мин сине яратам",
             "Kazajo—Мен сені жақсы көремін", "Uzbek—Men seni sevaman", "Tayiko—Ман туро дӯст медорам", "Sinhala—මම ඔයාට ආදරෙයි", "Haitiano—Mwen renmen ou",
@@ -202,56 +207,78 @@
             "Télugu—నేను నిన్ను ప్రేమిస్తున్నాను", "Tamil—நான் உன்னை காதலிக்கிறேன்", "Vietnamita—Tôi yêu bạn", "Tailandés—ฉันรักคุณ", "Albanés—Të dua"
         ];
 
-        // CREACIÓN DE LETRAS NEÓN AMARILLO
-        for(let i = 0; i < rawIdiomas.length; i++) {
+        // Parámetros de la espiral de letras
+        const totalLanguages = rawIdiomas.length;
+        const spiralCoils = 4; // Vueltas completas
+        const startRadiusWord = 1.3; // Comienza cerca del planeta
+        const endRadiusWord = 5.0; // Termina en el borde exterior
+        const heightFactorWord = 0.3; // Alternancia de altura reducida para visibilidad
+
+        for(let i = 0; i < totalLanguages; i++) {
             const data = rawIdiomas[i].split('—');
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 512; canvas.height = 128;
+            canvas.width = 512; canvas.height = 128; // Resolución aumentada para nitidez
             
-            // Efecto Neón: Sombra brillante
-            ctx.shadowColor = '#fff200';
-            ctx.shadowBlur = 15;
-            ctx.font = 'bold 42px Georgia'; 
+            // Efecto Neón Amarillo Mejorado
+            ctx.shadowColor = '#ffdb4d'; // Amarillo más suave
+            ctx.shadowBlur = 10;
+            ctx.font = 'bold 44px Georgia'; // Fuente un poco más grande
             ctx.fillStyle = '#ffffff'; 
             ctx.textAlign = 'center'; 
             
-            // Dibujar el texto principal
-            ctx.fillText(data[1], 256, 70);
+            ctx.fillText(data[1], 256, 75);
             
-            // Dibujar un borde suave neón
-            ctx.strokeStyle = '#fff200';
-            ctx.lineWidth = 1.5;
-            ctx.strokeText(data[1], 256, 70);
+            ctx.strokeStyle = '#ffdb4d';
+            ctx.lineWidth = 1.0;
+            ctx.strokeText(data[1], 256, 75);
 
             const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
                 map: new THREE.CanvasTexture(canvas), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending
             }));
             
-            const angle = (i / rawIdiomas.length) * Math.PI * 2;
-            const radius = 2.4 + (i % 3) * 0.7; 
-            wordSprite.position.set(Math.cos(angle) * radius, (i % 2 === 0 ? 0.35 : -0.35), Math.sin(angle) * radius);
-            wordSprite.scale.set(0.8, 0.2, 1);
+            // Lógica de posición en espiral ordenada
+            const progress = i / (totalLanguages - 1);
+            const angle = progress * Math.PI * 2 * spiralCoils;
+            const radius = startRadiusWord + (progress * (endRadiusWord - startRadiusWord));
+            
+            // Alternancia de altura sutil para que no se pisen
+            const yPos = (i % 2 === 0 ? heightFactorWord : -heightFactorWord);
+            
+            wordSprite.position.set(Math.cos(angle) * radius, yPos, Math.sin(angle) * radius);
+            wordSprite.scale.set(0.7, 0.18, 1); // Escala ajustada para lectura
             wordSprite.userData = { idioma: data[0] };
             wordsGroup.add(wordSprite);
         }
 
+        // --- ARREGLO DE FOTOS: MÁS CERCA Y SIN TOPARSE ---
         function cargarSiguienteFoto(index) {
+            const photoLimit = 30; // Límite de seguridad para fotos si hay recursión infinita
+            if (index > photoLimit) return;
+
             textureLoader.load(`./assets/photos/${user}/foto (${index}).jpg`, (texture) => {
                 const aspect = texture.image.width / texture.image.height;
                 const photoMat = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false });
                 const photoSprite = new THREE.Sprite(photoMat);
-                photoSprite.scale.set(0.3 * (aspect > 1 ? aspect : 1), 0.3 / (aspect < 1 ? aspect : 1), 1);
+                
+                // Fotos pequeñas
+                photoSprite.scale.set(0.25 * (aspect > 1 ? aspect : 1), 0.25 / (aspect < 1 ? aspect : 1), 1);
                 
                 const angle = Math.random() * Math.PI * 2;
-                const radius = 2.5 + Math.random() * 2.0;
-                photoSprite.position.set(Math.cos(angle) * radius, 0.4, Math.sin(angle) * radius);
+                // Radio ajustado para estar entre las dos capas de anillos y no topar letras interiores
+                const radius = 3.3 + Math.random() * 1.0; 
+                // Altura fija ordenada
+                photoSprite.position.set(Math.cos(angle) * radius, 0.35, Math.sin(angle) * radius);
+                
                 photoGroup.add(photoSprite);
                 cargarSiguienteFoto(index + 1);
-            }, undefined, () => console.log("Fotos listas"));
+            }, undefined, (err) => {
+                console.log(`Carga de fotos finalizada en el índice ${index - 1}.`);
+            });
         }
         cargarSiguienteFoto(1);
 
+        // --- INTERACCIÓN Y NIEBLA AMBIENTAL ---
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -273,9 +300,17 @@
         window.addEventListener('click', handleInteraction);
         window.addEventListener('touchstart', handleInteraction);
 
+        // NIEBLA AMBIENTAL SUTIL AMARILLA
+        // Parámetros: color, densidad. Usamos una densidad baja para un efecto sutil.
+        scene.fog = new THREE.FogExp2(0x332b00, 0.015); // Amarillo muy oscuro y baja densidad
+
         btnStart.addEventListener('click', () => {
             document.getElementById('loader-screen').style.opacity = '0';
-            setTimeout(() => document.getElementById('loader-screen').style.display = 'none', 500);
+            setTimeout(() => {
+                document.getElementById('loader-screen').style.display = 'none';
+                // REPRODUCCIÓN DE MÚSICA ARREGLADA: Debe ser dentro de un evento de clic
+                audio.play().catch(e => console.error("Error al reproducir audio:", e));
+            }, 500);
         });
 
         camera.position.set(0, 5, 12);
@@ -286,12 +321,12 @@
             requestAnimationFrame(animate);
             controls.update();
             saturn.rotation.y += 0.001;
-            ringGroup.rotation.y += 0.0004;
+            ringGroup.rotation.y += 0.0003; // Rotación de anillos más lenta para lectura
             starPoints.rotation.y += 0.0001;
-            stellarDust.rotation.y += 0.0003;
+            stellarDust.rotation.y += 0.0002;
 
             const dist = camera.position.distanceTo(scene.position);
-            const targetOpacity = dist < 8 ? 1 : 0;
+            const targetOpacity = dist < 12 ? 1 : 0; // Distancia de aparición aumentada
             
             wordsGroup.children.forEach(w => w.material.opacity = THREE.MathUtils.lerp(w.material.opacity, targetOpacity, 0.05));
             photoGroup.children.forEach(p => p.material.opacity = THREE.MathUtils.lerp(p.material.opacity, targetOpacity, 0.05));
