@@ -8,7 +8,6 @@
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
 
-        /* PANTALLA DE CARGA */
         #loader-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; display: flex; flex-direction: column;
@@ -79,23 +78,20 @@
         const urlParams = new URLSearchParams(window.location.search);
         const user = urlParams.get('user') || 'cliente_01';
 
-        // --- ILUMINACIÓN AJUSTADA ---
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
         directionalLight.position.set(5, 3, 5);
         scene.add(directionalLight);
 
-        // --- ESTRELLAS DE FONDO OPTIMIZADAS (CUADRADITOS) ---
         const starGeo = new THREE.BufferGeometry();
         const starCoords = [];
-        for (let i = 0; i < 20000; i++) { // Más estrellas cuadraditas
+        for (let i = 0; i < 20000; i++) {
             starCoords.push((Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000);
         }
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
         const starPoints = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, sizeAttenuation: false }));
         scene.add(starPoints);
 
-        // --- PLANETA CON ILUMINACIÓN ---
         const saturn = new THREE.Mesh(
             new THREE.SphereGeometry(1.2, 64, 64),
             new THREE.MeshStandardMaterial({ 
@@ -106,7 +102,6 @@
         );
         scene.add(saturn);
 
-        // --- ATMÓSFERA ---
         const atmosphereGlow = new THREE.Mesh(
             new THREE.SphereGeometry(1.27, 64, 64),
             new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.3, side: THREE.BackSide })
@@ -117,12 +112,11 @@
         ringGroup.rotation.x = Math.PI * 0.15;
         scene.add(ringGroup);
 
-        const ringStars = new THREE.Group(); // Las estrellitas de destello originales
+        const ringStars = new THREE.Group();
         const wordsGroup = new THREE.Group();
         const photoGroup = new THREE.Group();
         ringGroup.add(ringStars, wordsGroup, photoGroup);
 
-        // --- ANILLOS VISUALES ORIGINALES ---
         const ringMat = new THREE.MeshBasicMaterial({ 
             color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.5, 
             depthWrite: false, blending: THREE.AdditiveBlending 
@@ -133,7 +127,6 @@
             ringGroup.add(mesh);
         });
 
-        // --- ESTRELLITAS DE DESTELLO ORIGINALES (EN EL ANILLO) ---
         const destelloTexture = textureLoader.load('./assets/textures/destello.png');
         for (let i = 0; i < 1000; i++) {
             const star = new THREE.Sprite(new THREE.SpriteMaterial({ 
@@ -147,27 +140,26 @@
             ringStars.add(star);
         }
 
-        // --- 100 FRASES ÚNICAS DISTRIBUIDAS ---
         const rawIdiomas = [
             "Español—Te amo", "Inglés—I love you", "Francés—Je t’aime", "Italiano—Ti amo", "Alemán—Ich liebe dich",
             "Portugués—Eu te amo", "Ruso—Я тебя люблю", "Japonés—愛してる", "Coreano—사랑해", "Chino—我爱你",
             "Árabe—أحبك", "Hindi—प्यार करता हूँ", "Turco—Seni seviyorum", "Griego—Σ' αγαπώ", "Holandés—Ik hou van jou",
             "Sueco—Jag älskar dig", "Polaco—Kocham cię", "Checo—Miluji tě", "Húngaro—Szeretlek", "Rumano—Te iubesc",
-            "Finlandés—Rakastan sinua", "Hebreo—אни אוהব אותך", "Filipino—Mahal kita", "Indonesio—Aku cinta kamu",
+            "Finlandés—Rakastan sinua", "Hebreo—אני אוהב אותך", "Filipino—Mahal kita", "Indonesio—Aku cinta kamu",
             "Swahili—Nakupenda", "Ucraniano—Я тебе кохаю", "Catalán—T’estimo", "Euskera—Maite zaitut", "Quechua—Kuyayki",
             "Guaraní—Rohayhu", "Náhuatl—Nimitztlazohtla", "Maya—In k’áatech", "Latín—Te amo", "Esperanto—Mi amas vin",
             "Danés—Jeg elsker dig", "Noruego—Jeg elsker deg", "Eslovaco—Ľúbim ťa", "Serbio—Волим те", "Croata—Volim te",
             "Bosnio—Volim te", "Islandés—Ég elska þig", "Maltés—Inħobbok", "Malayo—Saya cinta padamu", "Zulú—Ngiyakuthanda",
-            "Xhosa—Ndiyakuthanda", "Yoruba—Mo nifẹ rẹ", "Amárico—እወ드ሃለሁ", "Somali—Waan ku jeclahay", "Nepalí—म तिमीलाई माया गर्छु",
-            "Punjabi—ਮੈਂ તੈનੂੰ પਿਆર કરદા હਾਂ", "Urdu—میں تم سے پیار کرتا ہوں", "Persa—دوستت دارم", "Kurdo—Ez hej te dikim",
-            "Georgiano—მიყვარხარ", "Armenio—Ես սիրում եմ քેզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
+            "Xhosa—Ndiyakuthanda", "Yoruba—Mo nifẹ rẹ", "Amárico—እወድሃለሁ", "Somali—Waan ku jeclahay", "Nepalí—म तिमीलाई माया गर्छु",
+            "Punjabi—ਮੈਂ તੈનੂੰ ਪਿਆਰ કરદા ਹਾਂ", "Urdu—میں تم سے پیار کرتا ہوں", "Persa—دوستت دارم", "Kurdo—Ez hej te dikim",
+            "Georgiano—მიყვარხار", "Armenio—Ես սիրում եմ քեզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
             "Lituano—Aš tave myliu", "Bielorruso—Я цябе кахаю", "Gallego—Quérote", "Aymara—Mä munta", "Cebuano—Gihigugma tika",
-            "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་ဒུང་ಯོད།",
+            "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་ဒུང་ಯོದ།",
             "Hawaiano—Aloha wau iā ‘oe", "Samoano—Ou te alofa ia te oe", "Maorí—Aroha atu au ki a koe", "Fiyiano—Au domoni iko", "Tonga—‘Ofa atu",
             "Lingala—Nalingi yo", "Hausa—Ina son ka", "Igbo—A hụrụ m gị n’anya", "Malgache—Tiako ianao", "Tártaro—Мин сине яратам",
-            "Kazajo—Мен сені жақсы көремін", "Uzbek—Men seni sevaman", "Tayiko—Ман туро дӯст медорам", "Sinhala—මම ඔයාට ආදරෙයි", "Haitiano—Mwen renmen ou",
+            "Kazajo—Мен сені жақсы көремін", "Uzbek—Men seni sevaman", "Tayiko—Ман туро дӯст медорам", "Sinhala—මම ඔයාට ਆදරෙයි", "Haitiano—Mwen renmen ou",
             "Irlandés—Taim i’ ngra leat", "Luxemburgués—Ech hunn dech gär", "Sánscrito—त्वामहम् स्नेहे", "Arameo—ܐܚܒܟ", "Copto—ⲁⲓⲉ rⲉϩⲟ",
-            "Bengalí—আমি তোমায় ভালোবাসি", "Guyaratí—હું તને પ્રેમ કરું છું", "Canarés—ನಾನು ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ", "Malabar—ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു", "Maratí—मी तुझ्यावर प्रेम करतो",
+            "Bengalí—আমি তোমায় ভালোবাসি", "Guyaratí—હું તને પ્રેમ કરું છું", "Canarés—ನಾನು ನಿನ್ನನ್ನು prītisuatēne", "Malabar—ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു", "Maratí—मी तुझ्यावर प्रेम करतो",
             "Télugu—నేను నిన్ను ప్రేమిస్తున్నాను", "Tamil—நான் உன்னை காதலிக்கிறேன்", "Vietnamita—Tôi yêu bạn", "Tailandés—ฉันรักคุณ", "Albanés—Të dua"
         ];
 
@@ -184,24 +176,22 @@
             }));
             
             const angle = (i / rawIdiomas.length) * Math.PI * 2;
-            // Distribución en 3 capas de radio para separación
             const radius = 2.4 + (i % 3) * 0.7; 
-            // Alternancia de altura para separación
             wordSprite.position.set(Math.cos(angle) * radius, (i % 2 === 0 ? 0.3 : -0.3), Math.sin(angle) * radius);
             wordSprite.scale.set(0.6, 0.15, 1);
             wordSprite.userData = { idioma: data[0] };
             wordsGroup.add(wordSprite);
         }
 
-        // --- CARGA DE FOTOS RECURSIVA (AJUSTADAS) ---
         function cargarSiguienteFoto(index) {
             textureLoader.load(`./assets/photos/${user}/foto (${index}).jpg`, (texture) => {
                 const aspect = texture.image.width / texture.image.height;
-                // NormalBlending para fotos más naturales (no aditivo)
                 const photoMat = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false });
                 const photoSprite = new THREE.Sprite(photoMat);
-                // Escala reducida para que no ocupen todo
-                photoSprite.scale.set(0.6 * (aspect > 1 ? aspect : 1), 0.6 / (aspect < 1 ? aspect : 1), 1);
+                
+                // --- AJUSTE: FOTOS MÁS PEQUEÑAS (ESCALA 0.3) ---
+                photoSprite.scale.set(0.3 * (aspect > 1 ? aspect : 1), 0.3 / (aspect < 1 ? aspect : 1), 1);
+                
                 const angle = Math.random() * Math.PI * 2;
                 const radius = 2.5 + Math.random() * 2.0;
                 photoSprite.position.set(Math.cos(angle) * radius, 0.4, Math.sin(angle) * radius);
@@ -246,10 +236,12 @@
             controls.update();
             saturn.rotation.y += 0.001;
             ringGroup.rotation.y += 0.0004;
-            starPoints.rotation.y += 0.0001; // Giro muy lento de fondo
+            starPoints.rotation.y += 0.0001;
 
-            const isNear = camera.position.distanceTo(scene.position) < 15;
-            const targetOpacity = isNear ? 1 : 0;
+            // --- AJUSTE: APARECER SOLO AL ESTAR MÁS CERCA (DISTANCIA < 8) ---
+            const dist = camera.position.distanceTo(scene.position);
+            const targetOpacity = dist < 8 ? 1 : 0;
+            
             wordsGroup.children.forEach(w => w.material.opacity = THREE.MathUtils.lerp(w.material.opacity, targetOpacity, 0.05));
             photoGroup.children.forEach(p => p.material.opacity = THREE.MathUtils.lerp(p.material.opacity, targetOpacity, 0.05));
 
