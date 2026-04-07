@@ -83,6 +83,7 @@
         directionalLight.position.set(5, 3, 5);
         scene.add(directionalLight);
 
+        // Fondo de estrellas lejanas
         const starGeo = new THREE.BufferGeometry();
         const starCoords = [];
         for (let i = 0; i < 20000; i++) {
@@ -118,7 +119,7 @@
         ringGroup.add(ringStars, wordsGroup, photoGroup);
 
         const ringMat = new THREE.MeshBasicMaterial({ 
-            color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.5, 
+            color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.4, 
             depthWrite: false, blending: THREE.AdditiveBlending 
         });
         [new THREE.RingGeometry(1.8, 3.2, 64), new THREE.RingGeometry(3.5, 4.8, 64)].forEach(geo => {
@@ -127,23 +128,50 @@
             ringGroup.add(mesh);
         });
 
+        // 1. DESTELLOS PNG (Mantenidos como pediste)
         const destelloTexture = textureLoader.load('./assets/textures/destello.png');
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < 600; i++) {
             const star = new THREE.Sprite(new THREE.SpriteMaterial({ 
-                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 
+                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.7 
             }));
             const angle = Math.random() * Math.PI * 2;
             const radius = 1.8 + Math.random() * 3.5;
-            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
-            const s = Math.random() * 0.2 + 0.05;
+            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.05, Math.sin(angle) * radius);
+            const s = Math.random() * 0.15 + 0.05;
             star.scale.set(s, s, 1);
             ringStars.add(star);
         }
 
+        // 2. NUEVA CAPA: PARTÍCULAS (CUADRADITOS) ALREDEDOR DEL DISCO Y PLANETA
+        const particleCount = 15000;
+        const particlePos = [];
+        for (let i = 0; i < particleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            // Unas cerca del planeta, otras en los anillos
+            const isNearPlanet = Math.random() > 0.6;
+            const radius = isNearPlanet ? (1.3 + Math.random() * 0.5) : (1.8 + Math.random() * 4.0);
+            const x = Math.cos(angle) * radius;
+            const y = (Math.random() - 0.5) * (isNearPlanet ? 1.5 : 0.3); // Más dispersión vertical cerca del planeta
+            const z = Math.sin(angle) * radius;
+            particlePos.push(x, y, z);
+        }
+        const particleGeo = new THREE.BufferGeometry();
+        particleGeo.setAttribute('position', new THREE.Float32BufferAttribute(particlePos, 3));
+        const particleMat = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 0.015, // Tamaño pequeño para que parezcan granos de arena/polvo
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true // Se hacen pequeñas con la distancia
+        });
+        const stellarDust = new THREE.Points(particleGeo, particleMat);
+        ringGroup.add(stellarDust); // Se añade al grupo del anillo para que rote con él
+
         const rawIdiomas = [
             "Español—Te amo", "Inglés—I love you", "Francés—Je t’aime", "Italiano—Ti amo", "Alemán—Ich liebe dich",
             "Portugués—Eu te amo", "Ruso—Я тебя люблю", "Japonés—愛してる", "Coreano—사랑해", "Chino—我爱你",
-            "Árabe—أحبك", "Hindi—प्यार करता हूँ", "Turco—Seni seviyorum", "Griego—Σ' αγαπώ", "Holandés—Ik hou van jou",
+            "Hindi—प्याر करता हूँ", "Turco—Seni seviyorum", "Griego—Σ' αγαπώ", "Holandés—Ik hou van jou",
             "Sueco—Jag älskar dig", "Polaco—Kocham cię", "Checo—Miluji tě", "Húngaro—Szeretlek", "Rumano—Te iubesc",
             "Finlandés—Rakastan sinua", "Hebreo—אני אוהב אותך", "Filipino—Mahal kita", "Indonesio—Aku cinta kamu",
             "Swahili—Nakupenda", "Ucraniano—Я тебе кохаю", "Catalán—T’estimo", "Euskera—Maite zaitut", "Quechua—Kuyayki",
@@ -151,13 +179,13 @@
             "Danés—Jeg elsker dig", "Noruego—Jeg elsker deg", "Eslovaco—Ľúbim ťa", "Serbio—Волим те", "Croata—Volim te",
             "Bosnio—Volim te", "Islandés—Ég elska þig", "Maltés—Inħobbok", "Malayo—Saya cinta padamu", "Zulú—Ngiyakuthanda",
             "Xhosa—Ndiyakuthanda", "Yoruba—Mo nifẹ rẹ", "Amárico—እወድሃለሁ", "Somali—Waan ku jeclahay", "Nepalí—म तिमीलाई माया गर्छु",
-            "Punjabi—ਮੈਂ તੈનੂੰ ਪਿਆਰ કરદા ਹਾਂ", "Urdu—میں تم سے پیار کرتا ہوں", "Persa—دوستت دارم", "Kurdo—Ez hej te dikim",
-            "Georgiano—მიყვარხار", "Armenio—Ես սիրում եմ քեզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
+            "Punjabi—ਮੈਂ તૈનੂੰ ਪਿਆਰ કરદા ਹਾਂ", "Urdu—میں تم سے پیار کرتا ہوں", "Persa—دوستت دارم", "Kurdo—Ez hej te dikim",
+            "Georgiano—მიყვარხარ", "Armenio—Ես սիրում եմ քեզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
             "Lituano—Aš tave myliu", "Bielorruso—Я цябе кахаю", "Gallego—Quérote", "Aymara—Mä munta", "Cebuano—Gihigugma tika",
-            "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་ဒུང་ಯོದ།",
+            "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་དུང་ཡོད།",
             "Hawaiano—Aloha wau iā ‘oe", "Samoano—Ou te alofa ia te oe", "Maorí—Aroha atu au ki a koe", "Fiyiano—Au domoni iko", "Tonga—‘Ofa atu",
             "Lingala—Nalingi yo", "Hausa—Ina son ka", "Igbo—A hụrụ m gị n’anya", "Malgache—Tiako ianao", "Tártaro—Мин сине яратам",
-            "Kazajo—Мен сені жақсы көремін", "Uzbek—Men seni sevaman", "Tayiko—Ман туро дӯст медорам", "Sinhala—මම ඔයාට ਆදරෙයි", "Haitiano—Mwen renmen ou",
+            "Kazajo—Мен сені жақсы көремін", "Uzbek—Men seni sevaman", "Tayiko—Ман туро дӯст медорам", "Sinhala—මම ඔයාට ආදරෙයි", "Haitiano—Mwen renmen ou",
             "Irlandés—Taim i’ ngra leat", "Luxemburgués—Ech hunn dech gär", "Sánscrito—त्वामहम् स्नेहे", "Arameo—ܐܚܒܟ", "Copto—ⲁⲓⲉ rⲉϩⲟ",
             "Bengalí—আমি তোমায় ভালোবাসি", "Guyaratí—હું તને પ્રેમ કરું છું", "Canarés—ನಾನು ನಿನ್ನನ್ನು prītisuatēne", "Malabar—ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു", "Maratí—मी तुझ्यावर प्रेम करतो",
             "Télugu—నేను నిన్ను ప్రేమిస్తున్నాను", "Tamil—நான் உன்னை காதலிக்கிறேன்", "Vietnamita—Tôi yêu bạn", "Tailandés—ฉันรักคุณ", "Albanés—Të dua"
@@ -188,8 +216,6 @@
                 const aspect = texture.image.width / texture.image.height;
                 const photoMat = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false });
                 const photoSprite = new THREE.Sprite(photoMat);
-                
-                // --- AJUSTE: FOTOS MÁS PEQUEÑAS (ESCALA 0.3) ---
                 photoSprite.scale.set(0.3 * (aspect > 1 ? aspect : 1), 0.3 / (aspect < 1 ? aspect : 1), 1);
                 
                 const angle = Math.random() * Math.PI * 2;
@@ -237,8 +263,10 @@
             saturn.rotation.y += 0.001;
             ringGroup.rotation.y += 0.0004;
             starPoints.rotation.y += 0.0001;
+            
+            // Animación sutil de las partículas
+            stellarDust.rotation.y += 0.0002;
 
-            // --- AJUSTE: APARECER SOLO AL ESTAR MÁS CERCA (DISTANCIA < 8) ---
             const dist = camera.position.distanceTo(scene.position);
             const targetOpacity = dist < 8 ? 1 : 0;
             
