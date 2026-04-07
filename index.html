@@ -3,25 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Universo Optimizado - Francis Designs</title>
+    <title>Un Universo Inmersivo para Ti - Francis Designs</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
+
+        /* PANTALLA DE CARGA */
         #loader-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 1000;
             transition: opacity 0.5s ease;
         }
+
         #saturn-logo { width: 45vw; max-width: 180px; margin-bottom: 25px; animation: float 3s ease-in-out infinite; }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+
         #progress-container { width: 75%; max-width: 280px; height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden; margin-bottom: 25px; }
         #progress-bar { width: 0%; height: 100%; background: #ffcc00; transition: width 0.3s; }
+
         #btn-start {
             display: none; padding: 18px 40px; background: #ffcc00; color: #000;
             border: none; border-radius: 35px; font-weight: bold; cursor: pointer;
             text-transform: uppercase; letter-spacing: 1px; font-size: 16px;
+            box-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
         }
+
         #language-toast {
             position: fixed; bottom: 12%; left: 50%; transform: translateX(-50%);
             background: rgba(255, 204, 0, 0.98); color: #000; padding: 15px 25px;
@@ -62,8 +69,8 @@
         loadingManager.onLoad = () => { btnStart.style.display = 'block'; document.getElementById('progress-container').style.display = 'none'; };
 
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 4000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
@@ -72,95 +79,141 @@
         const urlParams = new URLSearchParams(window.location.search);
         const user = urlParams.get('user') || 'cliente_01';
 
-        // --- ILUMINACIÓN ---
-        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        // --- ILUMINACIÓN AJUSTADA ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        directionalLight.position.set(5, 3, 5);
+        scene.add(directionalLight);
 
-        // --- ESTRELLAS CUADRADITAS (OPTIMIZADAS) ---
-        const starCount = 25000;
+        // --- ESTRELLAS DE FONDO OPTIMIZADAS (CUADRADITOS) ---
         const starGeo = new THREE.BufferGeometry();
-        const positions = new Float32Array(starCount * 3);
-        for (let i = 0; i < starCount * 3; i++) {
-            positions[i] = (Math.random() - 0.5) * 3000;
+        const starCoords = [];
+        for (let i = 0; i < 20000; i++) { // Más estrellas cuadraditas
+            starCoords.push((Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000);
         }
-        starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, sizeAttenuation: false });
-        const starField = new THREE.Points(starGeo, starMat);
-        scene.add(starField);
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
+        const starPoints = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, sizeAttenuation: false }));
+        scene.add(starPoints);
 
-        // --- ESFERA DE DESTELLOS (USA TU IMAGEN) ---
-        const flareTexture = textureLoader.load('./assets/textures/destello.png');
-        const flareCount = 500;
-        const flareGeo = new THREE.BufferGeometry();
-        const flarePos = new Float32Array(flareCount * 3);
-        for (let i = 0; i < flareCount; i++) {
-            const r = 15; // Radio de la esfera de destellos
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            flarePos[i*3] = r * Math.sin(phi) * Math.cos(theta);
-            flarePos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-            flarePos[i*3+2] = r * Math.cos(phi);
-        }
-        flareGeo.setAttribute('position', new THREE.BufferAttribute(flarePos, 3));
-        const flareMat = new THREE.PointsMaterial({ 
-            map: flareTexture, size: 15, transparent: true, opacity: 0.4, 
-            blending: THREE.AdditiveBlending, depthWrite: false 
-        });
-        const flareSphere = new THREE.Points(flareGeo, flareMat);
-        scene.add(flareSphere);
-
-        // --- PLANETA ---
+        // --- PLANETA CON ILUMINACIÓN ---
         const saturn = new THREE.Mesh(
-            new THREE.SphereGeometry(1.2, 32, 32),
-            new THREE.MeshStandardMaterial({ map: textureLoader.load('./assets/textures/saturno.jpg') })
+            new THREE.SphereGeometry(1.2, 64, 64),
+            new THREE.MeshStandardMaterial({ 
+                map: textureLoader.load('./assets/textures/saturno.jpg'),
+                roughness: 0.85,
+                metalness: 0.1
+            })
         );
         scene.add(saturn);
+
+        // --- ATMÓSFERA ---
+        const atmosphereGlow = new THREE.Mesh(
+            new THREE.SphereGeometry(1.27, 64, 64),
+            new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.3, side: THREE.BackSide })
+        );
+        scene.add(atmosphereGlow);
 
         const ringGroup = new THREE.Group();
         ringGroup.rotation.x = Math.PI * 0.15;
         scene.add(ringGroup);
 
+        const ringStars = new THREE.Group(); // Las estrellitas de destello originales
         const wordsGroup = new THREE.Group();
         const photoGroup = new THREE.Group();
-        ringGroup.add(wordsGroup, photoGroup);
+        ringGroup.add(ringStars, wordsGroup, photoGroup);
 
-        // --- FOTOS PEQUEÑAS Y SIN BRILLO ---
+        // --- ANILLOS VISUALES ORIGINALES ---
+        const ringMat = new THREE.MeshBasicMaterial({ 
+            color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.5, 
+            depthWrite: false, blending: THREE.AdditiveBlending 
+        });
+        [new THREE.RingGeometry(1.8, 3.2, 64), new THREE.RingGeometry(3.5, 4.8, 64)].forEach(geo => {
+            const mesh = new THREE.Mesh(geo, ringMat);
+            mesh.rotation.x = Math.PI / 2;
+            ringGroup.add(mesh);
+        });
+
+        // --- ESTRELLITAS DE DESTELLO ORIGINALES (EN EL ANILLO) ---
+        const destelloTexture = textureLoader.load('./assets/textures/destello.png');
+        for (let i = 0; i < 1000; i++) {
+            const star = new THREE.Sprite(new THREE.SpriteMaterial({ 
+                map: destelloTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 
+            }));
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 1.8 + Math.random() * 3.5;
+            star.position.set(Math.cos(angle) * radius, (Math.random() - 0.5) * 0.1, Math.sin(angle) * radius);
+            const s = Math.random() * 0.2 + 0.05;
+            star.scale.set(s, s, 1);
+            ringStars.add(star);
+        }
+
+        // --- 100 FRASES ÚNICAS DISTRIBUIDAS ---
+        const rawIdiomas = [
+            "Español—Te amo", "Inglés—I love you", "Francés—Je t’aime", "Italiano—Ti amo", "Alemán—Ich liebe dich",
+            "Portugués—Eu te amo", "Ruso—Я тебя люблю", "Japonés—愛してる", "Coreano—사랑해", "Chino—我爱你",
+            "Árabe—أحبك", "Hindi—प्यार करता हूँ", "Turco—Seni seviyorum", "Griego—Σ' αγαπώ", "Holandés—Ik hou van jou",
+            "Sueco—Jag älskar dig", "Polaco—Kocham cię", "Checo—Miluji tě", "Húngaro—Szeretlek", "Rumano—Te iubesc",
+            "Finlandés—Rakastan sinua", "Hebreo—אни אוהব אותך", "Filipino—Mahal kita", "Indonesio—Aku cinta kamu",
+            "Swahili—Nakupenda", "Ucraniano—Я тебе кохаю", "Catalán—T’estimo", "Euskera—Maite zaitut", "Quechua—Kuyayki",
+            "Guaraní—Rohayhu", "Náhuatl—Nimitztlazohtla", "Maya—In k’áatech", "Latín—Te amo", "Esperanto—Mi amas vin",
+            "Danés—Jeg elsker dig", "Noruego—Jeg elsker deg", "Eslovaco—Ľúbim ťa", "Serbio—Волим те", "Croata—Volim te",
+            "Bosnio—Volim te", "Islandés—Ég elska þig", "Maltés—Inħobbok", "Malayo—Saya cinta padamu", "Zulú—Ngiyakuthanda",
+            "Xhosa—Ndiyakuthanda", "Yoruba—Mo nifẹ rẹ", "Amárico—እወ드ሃለሁ", "Somali—Waan ku jeclahay", "Nepalí—म तिमीलाई माया गर्छु",
+            "Punjabi—ਮੈਂ તੈનੂੰ પਿਆર કરદા હਾਂ", "Urdu—میں تم سے پیار کرتا ہوں", "Persa—دوستت دارم", "Kurdo—Ez hej te dikim",
+            "Georgiano—მიყვარხარ", "Armenio—Ես սիրում եմ քેզ", "Azerbaiyano—Mən səni sevirəm", "Letón—Es tevi mīlu", "Estonio—Ma armastan sind",
+            "Lituano—Aš tave myliu", "Bielorruso—Я цябе кахаю", "Gallego—Quérote", "Aymara—Mä munta", "Cebuano—Gihigugma tika",
+            "Laos—ຂ້ອຍຮັກເຈົ້າ", "Birmano—မင်းကိုချစ်တယ်", "Jemer—ខ្ញុំស្រឡាញ់អ្នក", "Mongol—Би чамд хайртай", "Tibetano—ངས་ཁྱེད་ལ་བརྩེ་ဒུང་ಯོད།",
+            "Hawaiano—Aloha wau iā ‘oe", "Samoano—Ou te alofa ia te oe", "Maorí—Aroha atu au ki a koe", "Fiyiano—Au domoni iko", "Tonga—‘Ofa atu",
+            "Lingala—Nalingi yo", "Hausa—Ina son ka", "Igbo—A hụrụ m gị n’anya", "Malgache—Tiako ianao", "Tártaro—Мин сине яратам",
+            "Kazajo—Мен сені жақсы көремін", "Uzbek—Men seni sevaman", "Tayiko—Ман туро дӯст медорам", "Sinhala—මම ඔයාට ආදරෙයි", "Haitiano—Mwen renmen ou",
+            "Irlandés—Taim i’ ngra leat", "Luxemburgués—Ech hunn dech gär", "Sánscrito—त्वामहम् स्नेहे", "Arameo—ܐܚܒܟ", "Copto—ⲁⲓⲉ rⲉϩⲟ",
+            "Bengalí—আমি তোমায় ভালোবাসি", "Guyaratí—હું તને પ્રેમ કરું છું", "Canarés—ನಾನು ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ", "Malabar—ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു", "Maratí—मी तुझ्यावर प्रेम करतो",
+            "Télugu—నేను నిన్ను ప్రేమిస్తున్నాను", "Tamil—நான் உன்னை காதலிக்கிறேன்", "Vietnamita—Tôi yêu bạn", "Tailandés—ฉันรักคุณ", "Albanés—Të dua"
+        ];
+
+        for(let i = 0; i < rawIdiomas.length; i++) {
+            const data = rawIdiomas[i].split('—');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 320; canvas.height = 80;
+            ctx.font = 'bold 30px Georgia'; ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; 
+            ctx.fillText(data[1], 160, 50);
+
+            const wordSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
+                map: new THREE.CanvasTexture(canvas), transparent: true, opacity: 0, depthWrite: false
+            }));
+            
+            const angle = (i / rawIdiomas.length) * Math.PI * 2;
+            // Distribución en 3 capas de radio para separación
+            const radius = 2.4 + (i % 3) * 0.7; 
+            // Alternancia de altura para separación
+            wordSprite.position.set(Math.cos(angle) * radius, (i % 2 === 0 ? 0.3 : -0.3), Math.sin(angle) * radius);
+            wordSprite.scale.set(0.6, 0.15, 1);
+            wordSprite.userData = { idioma: data[0] };
+            wordsGroup.add(wordSprite);
+        }
+
+        // --- CARGA DE FOTOS RECURSIVA (AJUSTADAS) ---
         function cargarSiguienteFoto(index) {
             textureLoader.load(`./assets/photos/${user}/foto (${index}).jpg`, (texture) => {
-                const photoSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
-                    map: texture, transparent: true, opacity: 0, depthWrite: false 
-                }));
-                // Tamaño reducido para que no ocupen toda la pantalla
-                photoSprite.scale.set(0.4, 0.4, 1); 
+                const aspect = texture.image.width / texture.image.height;
+                // NormalBlending para fotos más naturales (no aditivo)
+                const photoMat = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false });
+                const photoSprite = new THREE.Sprite(photoMat);
+                // Escala reducida para que no ocupen todo
+                photoSprite.scale.set(0.6 * (aspect > 1 ? aspect : 1), 0.6 / (aspect < 1 ? aspect : 1), 1);
                 const angle = Math.random() * Math.PI * 2;
-                const radius = 2.5 + Math.random() * 2;
-                photoSprite.position.set(Math.cos(angle) * radius, 0.2, Math.sin(angle) * radius);
+                const radius = 2.5 + Math.random() * 2.0;
+                photoSprite.position.set(Math.cos(angle) * radius, 0.4, Math.sin(angle) * radius);
                 photoGroup.add(photoSprite);
-                if(index < 20) cargarSiguienteFoto(index + 1); // Limitador de seguridad
+                cargarSiguienteFoto(index + 1);
             }, undefined, () => console.log("Fotos listas"));
         }
         cargarSiguienteFoto(1);
 
-        // --- IDIOMAS ---
-        const rawIdiomas = ["Español—Te amo", "Inglés—I love you", "Francés—Je t’aime", "Italiano—Ti amo", "Japonés—愛してる"];
-        rawIdiomas.forEach((item, i) => {
-            const data = item.split('—');
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 256; canvas.height = 64;
-            ctx.font = 'bold 24px Arial'; ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center';
-            ctx.fillText(data[1], 128, 40);
-
-            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, opacity: 0 }));
-            const angle = (i / rawIdiomas.length) * Math.PI * 2;
-            sprite.position.set(Math.cos(angle) * 2.2, 0, Math.sin(angle) * 2.2);
-            sprite.scale.set(0.6, 0.15, 1);
-            sprite.userData = { idioma: data[0] };
-            wordsGroup.add(sprite);
-        });
-
-        // --- INTERACCIÓN ---
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
+
         const handleInteraction = (e) => {
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -169,13 +222,16 @@
             raycaster.setFromCamera(mouse, camera);
             const hits = raycaster.intersectObjects(wordsGroup.children);
             if (hits.length > 0) {
-                toast.innerHTML = `Idioma: ${hits[0].object.userData.idioma}`;
+                toast.innerHTML = `Así se dice Te Amo en<br><span style="font-size: 1.1em; color: #333;">${hits[0].object.userData.idioma}</span>`;
                 toast.style.display = 'block';
-                setTimeout(() => toast.style.display = 'none', 3000);
+                if(window.toastTimeout) clearTimeout(window.toastTimeout);
+                window.toastTimeout = setTimeout(() => toast.style.display = 'none', 3500);
             }
         };
 
         window.addEventListener('click', handleInteraction);
+        window.addEventListener('touchstart', handleInteraction);
+
         btnStart.addEventListener('click', () => {
             document.getElementById('loader-screen').style.opacity = '0';
             setTimeout(() => document.getElementById('loader-screen').style.display = 'none', 500);
@@ -188,15 +244,14 @@
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
-            saturn.rotation.y += 0.002;
-            ringGroup.rotation.y += 0.0005;
-            flareSphere.rotation.y -= 0.0002;
-            
-            // Efecto de visibilidad suave
-            const dist = camera.position.length();
-            const opacity = dist < 20 ? 1 : 0;
-            photoGroup.children.forEach(p => p.material.opacity = THREE.MathUtils.lerp(p.material.opacity, opacity, 0.05));
-            wordsGroup.children.forEach(w => w.material.opacity = THREE.MathUtils.lerp(w.material.opacity, opacity, 0.05));
+            saturn.rotation.y += 0.001;
+            ringGroup.rotation.y += 0.0004;
+            starPoints.rotation.y += 0.0001; // Giro muy lento de fondo
+
+            const isNear = camera.position.distanceTo(scene.position) < 15;
+            const targetOpacity = isNear ? 1 : 0;
+            wordsGroup.children.forEach(w => w.material.opacity = THREE.MathUtils.lerp(w.material.opacity, targetOpacity, 0.05));
+            photoGroup.children.forEach(p => p.material.opacity = THREE.MathUtils.lerp(p.material.opacity, targetOpacity, 0.05));
 
             renderer.render(scene, camera);
         }
